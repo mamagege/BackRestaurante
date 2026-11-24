@@ -10,9 +10,7 @@ import com.dows.bitacora2.restaurante.model.domain.ItemPedido;
 import com.dows.bitacora2.restaurante.model.domain.Mesa;
 import com.dows.bitacora2.restaurante.model.domain.Pedido;
 import com.dows.bitacora2.restaurante.model.domain.Plato;
-import com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument;
 import com.dows.bitacora2.restaurante.persistence.entity.PedidoEntity;
-import com.dows.bitacora2.restaurante.repository.EventoPedidoMongoRepository;
 import com.dows.bitacora2.restaurante.repository.PedidoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +43,10 @@ class PedidoServiceImplTest {
     private IMesaService mesaService;
 
     @Mock
-    private EventoPedidoMongoRepository eventoMongoRepo;
+    private org.springframework.context.ApplicationEventPublisher eventos;
+
+    @Mock
+    private com.dows.bitacora2.restaurante.security.UsuarioActual usuarioActual;
 
     @Mock
     private ICuentaService cuentaService;
@@ -388,5 +389,36 @@ class PedidoServiceImplTest {
         assertThrows(com.dows.bitacora2.restaurante.exception.EstadoInvalidoException.class,
                 () -> pedidoService.cambiarEstado(100L, "VOLANDO"));
         verifyNoInteractions(pedidoRepository);
+    }
+
+    @Test
+    void cambiarEstado_PublicaEventoDeAuditoriaConUsuarioYEstados() {
+        PedidoEntity entity = new PedidoEntity();
+        entity.setEstado(EstadoPedido.RECIBIDO);
+        when(pedidoRepository.findById(100L)).thenReturn(Optional.of(entity));
+        when(pedidoRepository.save(entity)).thenReturn(entity);
+        when(usuarioActual.obtener()).thenReturn("cocina@restaurante.com");
+
+        pedidoService.cambiarEstado(100L, "EN_PREPARACION");
+
+        org.mockito.ArgumentCaptor<com.dows.bitacora2.restaurante.model.domain.PedidoEstadoCambiado> captor =
+                org.mockito.ArgumentCaptor.forClass(com.dows.bitacora2.restaurante.model.domain.PedidoEstadoCambiado.class);
+        verify(eventos).publishEvent(captor.capture());
+        var evento = captor.getValue();
+        assertEquals(100L, evento.pedidoId());
+        assertEquals(EstadoPedido.RECIBIDO, evento.estadoAnterior());
+        assertEquals(EstadoPedido.EN_PREPARACION, evento.estadoNuevo());
+        assertEquals("cocina@restaurante.com", evento.usuario());
+        assertNotNull(evento.fecha());
+    }
+
+    @Test
+    void cambiarEstado_TransicionInvalida_NoPublicaEvento() {
+        PedidoEntity entity = new PedidoEntity();
+        entity.setEstado(EstadoPedido.RECIBIDO);
+        when(pedidoRepository.findById(100L)).thenReturn(Optional.of(entity));
+
+        assertThrows(TransicionEstadoInvalidaException.class, () -> pedidoService.cambiarEstado(100L, "ENTREGADO"));
+        verifyNoInteractions(eventos);
     }
 }

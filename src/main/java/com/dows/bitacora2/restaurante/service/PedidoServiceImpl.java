@@ -9,6 +9,9 @@ import com.dows.bitacora2.restaurante.model.domain.Cuenta;
 import com.dows.bitacora2.restaurante.model.domain.EstadoPedido;
 import com.dows.bitacora2.restaurante.model.domain.ItemPedido;
 import com.dows.bitacora2.restaurante.model.domain.Pedido;
+import com.dows.bitacora2.restaurante.model.domain.PedidoEstadoCambiado;
+import com.dows.bitacora2.restaurante.security.UsuarioActual;
+import org.springframework.context.ApplicationEventPublisher;
 import com.dows.bitacora2.restaurante.model.domain.Plato;
 import com.dows.bitacora2.restaurante.persistence.entity.PedidoEntity;
 import com.dows.bitacora2.restaurante.repository.PedidoRepository;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -30,7 +34,8 @@ public class PedidoServiceImpl implements IPedidoService {
     private final IPlatoService platoService;
     private final IMesaService mesaService;
     private final ICuentaService cuentaService;
-    private final com.dows.bitacora2.restaurante.repository.EventoPedidoMongoRepository eventoMongoRepo;
+    private final ApplicationEventPublisher eventos;
+    private final UsuarioActual usuarioActual;
 
     @Override
     @Transactional(readOnly = true)
@@ -64,11 +69,7 @@ public class PedidoServiceImpl implements IPedidoService {
         PedidoEntity nuevo = pedidoRepository.save(entityMapper.toEntity(pedido));
         log.info("Pedido creado: id={}, mesa={}", nuevo.getId(), nuevo.getIdMesa());
 
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            eventoMongoRepo.save(new com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument(
-                nuevo.getId(), null, "RECIBIDO", java.time.LocalDateTime.now(), "Pedido inicializado"
-            ));
-        });
+        publicar(nuevo.getId(), null, EstadoPedido.RECIBIDO, "Pedido creado");
 
         return entityMapper.toDomain(nuevo);
     }
@@ -105,11 +106,7 @@ public class PedidoServiceImpl implements IPedidoService {
         PedidoEntity guardado = pedidoRepository.save(entity);
         log.info("Estado de pedido id={} cambiado de {} a {}", id, estadoAnterior, nuevoEstado);
 
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            eventoMongoRepo.save(new com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument(
-                id, estadoAnterior.name(), nuevoEstado.name(), java.time.LocalDateTime.now(), "Cambio de estado"
-            ));
-        });
+        publicar(id, estadoAnterior, nuevoEstado, "Cambio de estado");
 
         return entityMapper.toDomain(guardado);
     }
@@ -126,11 +123,13 @@ public class PedidoServiceImpl implements IPedidoService {
         pedidoRepository.save(entity);
         log.info("Pedido cancelado: id={}", id);
 
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            eventoMongoRepo.save(new com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument(
-                id, estadoAnterior.name(), "CANCELADO", java.time.LocalDateTime.now(), "Pedido cancelado"
-            ));
-        });
+        publicar(id, estadoAnterior, EstadoPedido.CANCELADO, "Pedido cancelado");
+    }
+
+    /** Se registra en auditoría solo si la transacción confirma (ver AuditoriaPedidoListener). */
+    private void publicar(Long pedidoId, EstadoPedido anterior, EstadoPedido nuevo, String descripcion) {
+        eventos.publishEvent(new PedidoEstadoCambiado(pedidoId, anterior, nuevo, usuarioActual.obtener(),
+                LocalDateTime.now(), descripcion));
     }
 
     private PedidoEntity buscarEntity(Long id) {
