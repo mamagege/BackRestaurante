@@ -9,6 +9,7 @@ import com.dows.bitacora2.restaurante.service.ICuentaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class CuentaController implements CuentaApi {
 
     @Override
     @GetMapping
+    @PreAuthorize("hasAnyRole('CLIENTE', 'MESERO', 'ADMIN')")
     public ResponseEntity<List<CuentaResponseDTO>> listar() {
         List<Cuenta> cuentas = cuentaService.obtenerTodas();
         return ResponseEntity.ok(cuentaMapper.toResponseList(cuentas));
@@ -30,6 +32,7 @@ public class CuentaController implements CuentaApi {
 
     @Override
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'MESERO', 'ADMIN')")
     public ResponseEntity<CuentaResponseDTO> obtener(@PathVariable Long id) {
         Cuenta cuenta = cuentaService.obtenerPorId(id);
         return ResponseEntity.ok(cuentaMapper.toResponse(cuenta));
@@ -37,6 +40,7 @@ public class CuentaController implements CuentaApi {
 
     @Override
     @PostMapping
+    @PreAuthorize("hasAnyRole('CLIENTE', 'MESERO')")
     public ResponseEntity<CuentaResponseDTO> crear(@Valid @RequestBody CuentaRequestDTO dto) {
         Cuenta nueva = cuentaMapper.toDomain(dto);
         Cuenta creada = cuentaService.crear(nueva);
@@ -45,6 +49,7 @@ public class CuentaController implements CuentaApi {
 
     @Override
     @PatchMapping("/{id}/total")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'MESERO')")
     public ResponseEntity<CuentaResponseDTO> actualizarTotal(@PathVariable Long id) {
         Cuenta actualizada = cuentaService.actualizarTotal(id);
         return ResponseEntity.ok(cuentaMapper.toResponse(actualizada));
@@ -52,6 +57,7 @@ public class CuentaController implements CuentaApi {
 
     @Override
     @PatchMapping("/{id}/pago")
+    @PreAuthorize("hasAnyRole('MESERO', 'ADMIN')")
     public ResponseEntity<CuentaResponseDTO> pagar(@PathVariable Long id) {
         Cuenta pagada = cuentaService.pagar(id);
         return ResponseEntity.ok(cuentaMapper.toResponse(pagada));
