@@ -45,6 +45,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -54,7 +56,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(controllers = {AuthController.class, PlatoController.class, MenuController.class,
         PedidoController.class, MesaController.class, CuentaController.class})
-@Import({SecurityConfig.class, CorsConfig.class, JwtAuthFilter.class, JwtUtil.class})
+@Import({SecurityConfig.class, CorsConfig.class, JwtAuthFilter.class, JwtUtil.class,
+        ProblemDetailSecurityHandler.class})
 @TestPropertySource(properties = {
         "jwt.secret=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
         "spring.security.oauth2.client.registration.google.client-id=test",
@@ -181,10 +184,25 @@ class SecurityTest {
     }
 
     @Test
-    @DisplayName("un token inválido en una ruta protegida responde 401")
+    @DisplayName("un token inválido en una ruta protegida responde 401 con formato problem+json")
     void tokenInvalido_rutaProtegida_401() throws Exception {
         mockMvc.perform(get("/api/v1/pedidos").header("Authorization", "Bearer abc.def.ghi"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.codigo").value("NO_AUTENTICADO"))
+                .andExpect(jsonPath("$.instance").value("/api/v1/pedidos"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    @DisplayName("un rol sin permiso recibe 403 con formato problem+json")
+    void rolSinPermiso_403ProblemJson() throws Exception {
+        mockMvc.perform(patch("/api/v1/cuentas/1/pago").header("Authorization", tokenDe("cocina@restaurante.com", "COCINA")))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"))
+                .andExpect(jsonPath("$.detail").value("No tiene permisos para realizar esta acción"));
     }
 
     private static Arguments fila(String metodo, String ruta, String body, String... permitidos) {
