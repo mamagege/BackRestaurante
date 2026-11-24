@@ -16,7 +16,8 @@ docker compose up --build -d
 ## 🔒 Variables de Entorno Requeridas (`.env`)
 El proyecto requiere un archivo oculto `.env` en la raíz (ignorado por Git). Debes crearlo guiándote del archivo `.env.example` proporcionado en el repositorio.
 
-* **`JWT_SECRET`**: Clave criptográfica ultra segura en Base64 utilizada para firmar los tokens de seguridad de los usuarios del restaurante.
+* **`JWT_SECRET`**: Clave criptográfica en Base64 de mínimo 256 bits utilizada para firmar los tokens de seguridad. Es obligatoria: sin ella la API no arranca. Genérala con `openssl rand -base64 48`.
+* **`SEED_ENABLED`**: Si vale `true`, crea un usuario de prueba por rol al iniciar con la base vacía. Solo para desarrollo local; en QA y producción debe quedar sin definir.
 * **`SSL_KEYSTORE_PASSWORD`** *(opcional dependiendo de config)*: Contraseña para la llave SSL.
 
 ---
