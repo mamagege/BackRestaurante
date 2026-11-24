@@ -26,6 +26,7 @@ public interface PlatoApi {
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Plato creado"),
         @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "409", description = "Nombre duplicado")
     })
@@ -35,6 +36,7 @@ public interface PlatoApi {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Plato actualizado"),
         @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Plato no existe"),
         @ApiResponse(responseCode = "409", description = "Nombre duplicado")
@@ -44,6 +46,7 @@ public interface PlatoApi {
     @Operation(summary = "Activar o desactivar un plato")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Disponibilidad actualizada"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Plato no existe")
     })
@@ -52,6 +55,7 @@ public interface PlatoApi {
     @Operation(summary = "Eliminar un plato")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Plato eliminado"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Plato no existe")
     })

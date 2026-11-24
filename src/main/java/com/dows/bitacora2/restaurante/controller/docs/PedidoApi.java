@@ -2,6 +2,7 @@ package com.dows.bitacora2.restaurante.controller.docs;
 
 import com.dows.bitacora2.restaurante.model.dto.request.PedidoRequestDTO;
 import com.dows.bitacora2.restaurante.model.dto.response.PedidoResponseDTO;
+import com.dows.bitacora2.restaurante.model.dto.response.ResumenDiaDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -14,6 +15,7 @@ public interface PedidoApi {
     @Operation(summary = "Listar todos los pedidos")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista de pedidos"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente.")
     })
     ResponseEntity<List<PedidoResponseDTO>> listar();
@@ -21,6 +23,7 @@ public interface PedidoApi {
     @Operation(summary = "Obtener pedido por ID")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Pedido encontrado"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Pedido no existe")
     })
@@ -29,8 +32,11 @@ public interface PedidoApi {
     @Operation(summary = "Crear un nuevo pedido")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Pedido creado"),
-        @ApiResponse(responseCode = "400", description = "Datos inválidos o reglas de negocio no cumplidas"),
-        @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente.")
+        @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
+        @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
+        @ApiResponse(responseCode = "404", description = "La mesa o alguno de los platos no existe"),
+        @ApiResponse(responseCode = "422", description = "Plato no disponible o personalización inválida (RN-01, RN-02)")
     })
     ResponseEntity<PedidoResponseDTO> crear(PedidoRequestDTO dto);
 
@@ -38,27 +44,41 @@ public interface PedidoApi {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Pedido actualizado"),
         @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Pedido no existe"),
-        @ApiResponse(responseCode = "409", description = "Pedido no está en estado RECIBIDO")
+        @ApiResponse(responseCode = "422", description = "El pedido ya no está en estado RECIBIDO (RN-04) o personalización inválida")
     })
     ResponseEntity<PedidoResponseDTO> actualizar(Long id, PedidoRequestDTO dto);
 
     @Operation(summary = "Cambiar estado de un pedido")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Estado actualizado"),
-        @ApiResponse(responseCode = "400", description = "Transición inválida o estado inexistente"),
+        @ApiResponse(responseCode = "400", description = "Falta el parámetro estado"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
-        @ApiResponse(responseCode = "404", description = "Pedido no existe")
+        @ApiResponse(responseCode = "404", description = "Pedido no existe"),
+        @ApiResponse(responseCode = "422", description = "Transición no permitida o estado inexistente")
     })
     ResponseEntity<PedidoResponseDTO> cambiarEstado(Long id, String estado);
 
     @Operation(summary = "Cancelar pedido")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Pedido cancelado"),
-        @ApiResponse(responseCode = "400", description = "No se puede cancelar en este estado"),
+
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
+
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
-        @ApiResponse(responseCode = "404", description = "Pedido no existe")
+        @ApiResponse(responseCode = "404", description = "Pedido no existe"),
+        @ApiResponse(responseCode = "422", description = "El pedido ya no está en estado RECIBIDO y no se puede cancelar")
     })
     ResponseEntity<Void> eliminar(Long id);
+
+    @Operation(summary = "Resumen de ventas")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Total de pedidos, ingresos y platos más pedidos"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
+        @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente.")
+    })
+    ResponseEntity<ResumenDiaDTO> resumenDelDia();
 }
