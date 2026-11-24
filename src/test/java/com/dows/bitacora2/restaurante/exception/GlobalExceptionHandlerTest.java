@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
@@ -58,8 +58,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private JwtAuthFilter jwtAuthFilter;
-    @MockBean private JwtUtil jwtUtil;
+    @MockitoBean private JwtAuthFilter jwtAuthFilter;
+    @MockitoBean private JwtUtil jwtUtil;
 
     private ResultActions esperarProblema(ResultActions r, int status, String codigo) throws Exception {
         return r.andExpect(status().is(status))

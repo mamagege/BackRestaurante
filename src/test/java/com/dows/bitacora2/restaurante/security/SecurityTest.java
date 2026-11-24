@@ -25,7 +25,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -78,17 +78,17 @@ class SecurityTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private JwtUtil jwtUtil;
 
-    @MockBean private IAuthService authService;
-    @MockBean private IPlatoService platoService;
-    @MockBean private IPedidoService pedidoService;
-    @MockBean private IMesaService mesaService;
-    @MockBean private ICuentaService cuentaService;
-    @MockBean private PlatoMapper platoMapper;
-    @MockBean private PedidoMapper pedidoMapper;
-    @MockBean private MesaMapper mesaMapper;
-    @MockBean private CuentaMapper cuentaMapper;
-    @MockBean private UsuarioDetailsService usuarioDetailsService;
-    @MockBean private UsuarioRepository usuarioRepository;
+    @MockitoBean private IAuthService authService;
+    @MockitoBean private IPlatoService platoService;
+    @MockitoBean private IPedidoService pedidoService;
+    @MockitoBean private IMesaService mesaService;
+    @MockitoBean private ICuentaService cuentaService;
+    @MockitoBean private PlatoMapper platoMapper;
+    @MockitoBean private PedidoMapper pedidoMapper;
+    @MockitoBean private MesaMapper mesaMapper;
+    @MockitoBean private CuentaMapper cuentaMapper;
+    @MockitoBean private UsuarioDetailsService usuarioDetailsService;
+    @MockitoBean private UsuarioRepository usuarioRepository;
 
     /** método, ruta, body, roles permitidos (o PUBLICO). */
     private static Stream<Arguments> matriz() {

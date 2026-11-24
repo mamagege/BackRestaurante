@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -28,9 +28,9 @@ class AuthControllerTest {
     private static final String LOGIN = "{\"email\":\"admin@restaurante.com\",\"password\":\"incorrecta\"}";
 
     @Autowired private MockMvc mockMvc;
-    @MockBean private IAuthService authService;
-    @MockBean private JwtAuthFilter jwtAuthFilter;
-    @MockBean private JwtUtil jwtUtil;
+    @MockitoBean private IAuthService authService;
+    @MockitoBean private JwtAuthFilter jwtAuthFilter;
+    @MockitoBean private JwtUtil jwtUtil;
 
     @Test
     @DisplayName("login exitoso devuelve 200 con el token")

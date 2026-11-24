@@ -18,7 +18,7 @@ import com.dows.bitacora2.restaurante.service.IPlatoService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -42,7 +42,7 @@ class ConcurrenciaIntegracionTest extends IntegracionBase {
 
     private static final AtomicInteger SECUENCIA = new AtomicInteger(100);
 
-    @SpyBean private IMesaService mesaService;
+    @MockitoSpyBean private IMesaService mesaService;
     @Autowired private ICuentaService cuentaService;
     @Autowired private IPlatoService platoService;
     @Autowired private IPedidoService pedidoService;
