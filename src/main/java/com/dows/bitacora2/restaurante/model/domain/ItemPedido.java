@@ -12,6 +12,8 @@ import java.util.List;
  * <ul>
  *   <li>RN-01: pizza y pasta exigen masa base (o tipo de pasta) y salsa primaria.</li>
  *   <li>RN-02: una pizza lleva máximo {@value #MAX_TOPPINGS_PIZZA} toppings.</li>
+ *   <li>Pasta: máximo {@value #MAX_PROTEINAS_PASTA} proteínas y máximo
+ *       {@value #MAX_SALSAS_PASTA} salsas combinadas (primaria + adicionales).</li>
  *   <li>Las proteínas y salsas adicionales solo aplican a pasta.</li>
  *   <li>Un plato no personalizable (bebida, postre, …) no acepta masa, salsas ni extras.</li>
  * </ul>
@@ -19,6 +21,8 @@ import java.util.List;
 public class ItemPedido {
 
     public static final int MAX_TOPPINGS_PIZZA = 5;
+    public static final int MAX_PROTEINAS_PASTA = 2;
+    public static final int MAX_SALSAS_PASTA = 3;
 
     private Long idPlato;
     private String nombrePlato;
@@ -79,6 +83,18 @@ public class ItemPedido {
             if (toppings.size() > MAX_TOPPINGS_PIZZA) {
                 throw new ToppingsExcedidosException("RN-02: Una pizza no puede llevar más de "
                         + MAX_TOPPINGS_PIZZA + " toppings (se enviaron " + toppings.size() + ").");
+            }
+        }
+
+        if (tipo == TipoPersonalizacion.PASTA) {
+            if (proteinas.size() > MAX_PROTEINAS_PASTA) {
+                throw new ReglaDeNegocioException("Límite de proteínas: una pasta puede tener máximo "
+                        + MAX_PROTEINAS_PASTA + " proteínas (se enviaron " + proteinas.size() + ").");
+            }
+            int totalSalsas = 1 + salsasAdicionales.size();
+            if (totalSalsas > MAX_SALSAS_PASTA) {
+                throw new ReglaDeNegocioException("Límite de salsas: una pasta puede combinar máximo "
+                        + MAX_SALSAS_PASTA + " salsas (se enviaron " + totalSalsas + ").");
             }
         }
     }

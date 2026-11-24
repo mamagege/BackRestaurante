@@ -130,6 +130,15 @@ class ItemPedidoTest {
             assertDoesNotThrow(() -> item.aplicarPlato(PASTA));
         }
 
+        @Test
+        @DisplayName("3 proteínas se rechaza")
+        void tresProteinas_lanza() {
+            ItemPedido item = item("Spaghetti", "Alfredo");
+            item.setProteinas(lista(3));
+            ReglaDeNegocioException ex = assertThrows(ReglaDeNegocioException.class, () -> item.aplicarPlato(PASTA));
+            assertTrue(ex.getMessage().contains("proteínas"));
+        }
+
         @ParameterizedTest
         @ValueSource(ints = {0, 1, 2})
         @DisplayName("hasta 3 salsas combinadas (primaria + 2 adicionales) es válido")
@@ -137,6 +146,15 @@ class ItemPedidoTest {
             ItemPedido item = item("Penne", "Napolitana");
             item.setSalsasAdicionales(lista(adicionales));
             assertDoesNotThrow(() -> item.aplicarPlato(PASTA));
+        }
+
+        @Test
+        @DisplayName("4 salsas combinadas se rechaza")
+        void cuatroSalsas_lanza() {
+            ItemPedido item = item("Penne", "Napolitana");
+            item.setSalsasAdicionales(lista(3));
+            ReglaDeNegocioException ex = assertThrows(ReglaDeNegocioException.class, () -> item.aplicarPlato(PASTA));
+            assertTrue(ex.getMessage().contains("se enviaron 4"));
         }
 
         @Test
