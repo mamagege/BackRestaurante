@@ -123,4 +123,43 @@ class MesaServiceImplTest {
 
         assertThrows(ConflictoException.class, () -> mesaService.cerrarCuenta(1L));
     }
+
+    @Test
+    void cambiarEstado_MesaLibreAReservada_Cambia() {
+        when(mesaRepository.findById(1L)).thenReturn(Optional.of(mesaEntity));
+        when(entityMapper.toDomain(mesaEntity)).thenReturn(mesa);
+        when(mesaRepository.save(mesaEntity)).thenReturn(mesaEntity);
+
+        mesaService.cambiarEstado(1L, " reservada ");
+
+        assertEquals(EstadoMesa.RESERVADA, mesaEntity.getEstado());
+    }
+
+    @Test
+    void cambiarEstado_MesaConCuentaAbierta_DebeLanzarConflictoYNoGuardar() {
+        mesa.setCuentaAbierta(true);
+        mesa.setEstado(EstadoMesa.OCUPADA);
+        when(mesaRepository.findById(1L)).thenReturn(Optional.of(mesaEntity));
+        when(entityMapper.toDomain(mesaEntity)).thenReturn(mesa);
+
+        assertThrows(ConflictoException.class, () -> mesaService.cambiarEstado(1L, "DISPONIBLE"));
+        verify(mesaRepository, never()).save(any());
+    }
+
+    @Test
+    void cambiarEstado_OcupadaManual_DebeLanzarReglaDeNegocio() {
+        when(mesaRepository.findById(1L)).thenReturn(Optional.of(mesaEntity));
+        when(entityMapper.toDomain(mesaEntity)).thenReturn(mesa);
+
+        assertThrows(com.dows.bitacora2.restaurante.exception.ReglaDeNegocioException.class,
+                () -> mesaService.cambiarEstado(1L, "OCUPADA"));
+        verify(mesaRepository, never()).save(any());
+    }
+
+    @Test
+    void cambiarEstado_EstadoInexistente_DebeLanzarEstadoInvalidoSinConsultar() {
+        assertThrows(com.dows.bitacora2.restaurante.exception.EstadoInvalidoException.class,
+                () -> mesaService.cambiarEstado(1L, "VOLANDO"));
+        verifyNoInteractions(mesaRepository);
+    }
 }

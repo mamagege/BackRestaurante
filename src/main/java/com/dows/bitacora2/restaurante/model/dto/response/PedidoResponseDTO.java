@@ -3,6 +3,7 @@ import java.util.List;
 public record PedidoResponseDTO(
     Long id,
     Long idMesa,
+    Long idCuenta,
     String estado,
     Double total,
     List<ItemPedidoResponseDTO> items

@@ -17,6 +17,10 @@ public class PedidoEntity {
     @Column(nullable = false)
     private Long idMesa;
 
+    /** Cuenta a la que se factura el pedido. Nula solo en pedidos anteriores a esta relación. */
+    @Column(name = "id_cuenta")
+    private Long idCuenta;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoPedido estado;
@@ -32,6 +36,8 @@ public class PedidoEntity {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public Long getIdCuenta() { return idCuenta; }
+    public void setIdCuenta(Long idCuenta) { this.idCuenta = idCuenta; }
     public Long getIdMesa() { return idMesa; }
     public void setIdMesa(Long idMesa) { this.idMesa = idMesa; }
     public EstadoPedido getEstado() { return estado; }

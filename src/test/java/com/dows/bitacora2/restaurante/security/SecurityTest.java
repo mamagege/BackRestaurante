@@ -72,6 +72,7 @@ class SecurityTest {
     private static final String PEDIDO = "{\"idMesa\":1,\"items\":[{\"idPlato\":1,\"cantidad\":1}]}";
     private static final String MESA = "{\"numero\":1,\"capacidad\":4}";
     private static final String CUENTA = "{\"idMesa\":1}";
+    private static final String PAGO = "{\"metodoPago\":\"EFECTIVO\",\"montoRecibido\":1000}";
     private static final String LOGIN = "{\"email\":\"a@b.com\",\"password\":\"12345678\"}";
 
     @Autowired private MockMvc mockMvc;
@@ -118,14 +119,15 @@ class SecurityTest {
                 fila("POST", "/api/v1/mesas", MESA, "ADMIN"),
                 fila("PUT", "/api/v1/mesas/1", MESA, "ADMIN"),
                 fila("PATCH", "/api/v1/mesas/1/estado?estado=OCUPADA", null, "MESERO", "ADMIN"),
-                fila("PATCH", "/api/v1/mesas/1/apertura-cuenta", null, "CLIENTE", "MESERO"),
-                fila("PATCH", "/api/v1/mesas/1/cierre-cuenta", null, "MESERO", "ADMIN"),
+                // eliminados: la mesa solo se ocupa/libera a través de la cuenta (RN-07)
+                fila("PATCH", "/api/v1/mesas/1/apertura-cuenta", null),
+                fila("PATCH", "/api/v1/mesas/1/cierre-cuenta", null),
 
                 fila("GET", "/api/v1/cuentas", null, "CLIENTE", "MESERO", "ADMIN"),
                 fila("GET", "/api/v1/cuentas/1", null, "CLIENTE", "MESERO", "ADMIN"),
                 fila("POST", "/api/v1/cuentas", CUENTA, "CLIENTE", "MESERO"),
                 fila("PATCH", "/api/v1/cuentas/1/total", null, "CLIENTE", "MESERO"),
-                fila("PATCH", "/api/v1/cuentas/1/pago", null, "MESERO", "ADMIN"),
+                fila("PATCH", "/api/v1/cuentas/1/pago", PAGO, "MESERO", "ADMIN"),
 
                 // una ruta de la API que no está declarada se niega a todos los autenticados
                 fila("GET", "/api/v1/no-declarada", null)
@@ -165,14 +167,16 @@ class SecurityTest {
     @Test
     @DisplayName("un JWT válido de MESERO permite pagar una cuenta")
     void jwtValido_meseroPuedePagar() throws Exception {
-        mockMvc.perform(patch("/api/v1/cuentas/1/pago").header("Authorization", tokenDe("mesero@restaurante.com", "MESERO")))
+        mockMvc.perform(patch("/api/v1/cuentas/1/pago").header("Authorization", tokenDe("mesero@restaurante.com", "MESERO"))
+                        .contentType(MediaType.APPLICATION_JSON).content(PAGO))
                 .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("un JWT válido de CLIENTE no permite pagar una cuenta")
     void jwtValido_clienteNoPuedePagar() throws Exception {
-        mockMvc.perform(patch("/api/v1/cuentas/1/pago").header("Authorization", tokenDe("cliente@restaurante.com", "CLIENTE")))
+        mockMvc.perform(patch("/api/v1/cuentas/1/pago").header("Authorization", tokenDe("cliente@restaurante.com", "CLIENTE"))
+                        .contentType(MediaType.APPLICATION_JSON).content(PAGO))
                 .andExpect(status().isForbidden());
     }
 

@@ -49,34 +49,18 @@ public interface MesaApi {
     })
     ResponseEntity<MesaResponseDTO> actualizar(Long id, MesaRequestDTO dto);
 
-    @Operation(summary = "Cambiar estado de una mesa")
+    @Operation(summary = "Cambiar estado de una mesa",
+            description = "Solo para marcar una mesa libre como RESERVADA o DISPONIBLE. El estado OCUPADA se asigna "
+                    + "al abrir una cuenta (POST /api/v1/cuentas) y la mesa se libera al registrar el pago "
+                    + "(PATCH /api/v1/cuentas/{id}/pago).")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Estado actualizado"),
         @ApiResponse(responseCode = "400", description = "Falta el parámetro estado"),
         @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Mesa no existe"),
-        @ApiResponse(responseCode = "422", description = "Estado de mesa inexistente")
+        @ApiResponse(responseCode = "409", description = "La mesa tiene una cuenta abierta"),
+        @ApiResponse(responseCode = "422", description = "Estado inexistente o estado OCUPADA asignado manualmente")
     })
     ResponseEntity<MesaResponseDTO> cambiarEstado(Long id, String estado);
-
-    @Operation(summary = "Abrir cuenta de una mesa")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Cuenta abierta"),
-        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
-        @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
-        @ApiResponse(responseCode = "404", description = "Mesa no existe"),
-        @ApiResponse(responseCode = "409", description = "La mesa ya tiene una cuenta abierta (RN-06)")
-    })
-    ResponseEntity<MesaResponseDTO> abrirCuenta(Long id);
-
-    @Operation(summary = "Cerrar cuenta de una mesa")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Cuenta cerrada"),
-        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
-        @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
-        @ApiResponse(responseCode = "404", description = "Mesa no existe"),
-        @ApiResponse(responseCode = "409", description = "Mesa no tiene cuenta abierta")
-    })
-    ResponseEntity<MesaResponseDTO> cerrarCuenta(Long id);
 }

@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface PedidoRepository extends JpaRepository<PedidoEntity, Long> {
-    List<PedidoEntity> findByIdMesa(Long idMesa);
+    List<PedidoEntity> findByIdCuenta(Long idCuenta);
 }

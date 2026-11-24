@@ -15,6 +15,7 @@ import java.util.List;
 public interface PedidoMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "idCuenta", ignore = true)
     @Mapping(target = "estado", expression = "java(com.dows.bitacora2.restaurante.model.domain.EstadoPedido.RECIBIDO)")
     @Mapping(target = "timestamp", expression = "java(java.time.LocalDateTime.now())")
     Pedido toDomain(PedidoRequestDTO dto);

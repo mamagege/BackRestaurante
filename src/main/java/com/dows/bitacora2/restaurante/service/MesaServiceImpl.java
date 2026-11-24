@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @lombok.extern.slf4j.Slf4j
@@ -81,16 +82,19 @@ public class MesaServiceImpl implements IMesaService {
     @Override
     @Transactional
     public Mesa cambiarEstado(Long id, String estadoStr) {
-        MesaEntity mesa = mesaRepository.findById(id)
-                .orElseThrow(() -> new RecursoNoEncontradoException("Mesa", id));
+        EstadoMesa nuevoEstado;
         try {
-            EstadoMesa nuevoEstado = EstadoMesa.valueOf(estadoStr.toUpperCase());
-            mesa.setEstado(nuevoEstado);
-            log.info("Estado de mesa id={} cambiado a {}", id, nuevoEstado);
-            return entityMapper.toDomain(mesaRepository.save(mesa));
+            nuevoEstado = EstadoMesa.valueOf(estadoStr.strip().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw new EstadoInvalidoException("Estado de mesa inválido: " + estadoStr);
         }
+        MesaEntity entity = mesaRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Mesa", id));
+        Mesa mesa = entityMapper.toDomain(entity);
+        mesa.cambiarEstadoManual(nuevoEstado);
+        entity.setEstado(mesa.getEstado());
+        log.info("Estado de mesa id={} cambiado a {}", id, nuevoEstado);
+        return entityMapper.toDomain(mesaRepository.save(entity));
     }
 
     @Override

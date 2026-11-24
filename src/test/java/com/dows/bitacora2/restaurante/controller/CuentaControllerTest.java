@@ -11,6 +11,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -38,11 +39,28 @@ class CuentaControllerTest {
     @Test
     void pagar_ConPedidosPendientes_DevuelveError() throws Exception {
         // Arrange
-        when(cuentaService.pagar(anyLong())).thenThrow(new ReglaDeNegocioException("No se puede pagar la cuenta. Existen pedidos pendientes en la mesa."));
+        when(cuentaService.pagar(anyLong(), any(), any())).thenThrow(new ReglaDeNegocioException("No se puede pagar la cuenta. Existen pedidos pendientes en la mesa."));
 
         // Act & Assert
         mockMvc.perform(patch("/api/v1/cuentas/1/pago")
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"metodoPago\":\"EFECTIVO\",\"montoRecibido\":50000}"))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void pagar_SinMetodoDePago_Devuelve400() throws Exception {
+        mockMvc.perform(patch("/api/v1/cuentas/1/pago")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"montoRecibido\":50000}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void pagar_MetodoDePagoInexistente_Devuelve400() throws Exception {
+        mockMvc.perform(patch("/api/v1/cuentas/1/pago")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"metodoPago\":\"BITCOIN\",\"montoRecibido\":50000}"))
+                .andExpect(status().isBadRequest());
     }
 }
