@@ -22,11 +22,6 @@ spring:
     mongodb:
       uri: mongodb://localhost:27017/restaurante_historico
 
-  # Configuración JWT
-  jwt:
-    secret: TXkgc3VwZXIgc2VjcmV0IGtleSBwYXJhIGVsIHJlc3RhdXJhbnRl
-    expiration-ms: 3600000
-
   # Configuración OAuth2
   security:
     oauth2:
@@ -39,6 +34,11 @@ spring:
               - openid
               - profile
               - email
+
+# Configuración JWT: el secreto llega SOLO por variable de entorno (ver .env.example)
+jwt:
+  secret: ${JWT_SECRET:}
+  expiration-ms: ${JWT_EXPIRATION_MS:3600000}
 
 server:
   port: 8443
