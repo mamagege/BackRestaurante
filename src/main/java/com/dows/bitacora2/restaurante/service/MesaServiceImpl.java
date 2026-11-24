@@ -2,7 +2,7 @@ package com.dows.bitacora2.restaurante.service;
 
 import com.dows.bitacora2.restaurante.exception.EstadoInvalidoException;
 import com.dows.bitacora2.restaurante.exception.RecursoNoEncontradoException;
-import com.dows.bitacora2.restaurante.exception.ReglaDeNegocioException;
+import com.dows.bitacora2.restaurante.exception.ConflictoException;
 import com.dows.bitacora2.restaurante.mapper.MesaEntityMapper;
 import com.dows.bitacora2.restaurante.model.domain.EstadoMesa;
 import com.dows.bitacora2.restaurante.model.domain.Mesa;
@@ -52,10 +52,8 @@ public class MesaServiceImpl implements IMesaService {
     @Override
     @Transactional
     public Mesa crear(Mesa mesa) {
-        boolean existeNumero = mesaRepository.findAll().stream()
-                .anyMatch(m -> m.getNumero().equals(mesa.getNumero()));
-        if (existeNumero) {
-            throw new ReglaDeNegocioException("Ya existe una mesa con el número " + mesa.getNumero());
+        if (mesaRepository.existsByNumero(mesa.getNumero())) {
+            throw new ConflictoException("Ya existe una mesa con el número " + mesa.getNumero());
         }
         mesa.setEstado(EstadoMesa.DISPONIBLE);
         mesa.setCuentaAbierta(false);
@@ -70,10 +68,8 @@ public class MesaServiceImpl implements IMesaService {
         MesaEntity existente = mesaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Mesa", id));
         
-        boolean existeOtroNumero = mesaRepository.findAll().stream()
-                .anyMatch(m -> !m.getId().equals(id) && m.getNumero().equals(mesaModificada.getNumero()));
-        if (existeOtroNumero) {
-            throw new ReglaDeNegocioException("Ya existe otra mesa con el número " + mesaModificada.getNumero());
+        if (mesaRepository.existsByNumeroAndIdNot(mesaModificada.getNumero(), id)) {
+            throw new ConflictoException("Ya existe otra mesa con el número " + mesaModificada.getNumero());
         }
 
         existente.setNumero(mesaModificada.getNumero());
@@ -103,7 +99,7 @@ public class MesaServiceImpl implements IMesaService {
         MesaEntity mesa = mesaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Mesa", id));
         if (Boolean.TRUE.equals(mesa.getCuentaAbierta())) {
-            throw new ReglaDeNegocioException("RN-06: La mesa ya tiene una cuenta abierta. Solo puede haber una cuenta abierta a la vez.");
+            throw new ConflictoException("RN-06: La mesa ya tiene una cuenta abierta. Solo puede haber una cuenta abierta a la vez.");
         }
         mesa.setCuentaAbierta(true);
         mesa.setEstado(EstadoMesa.OCUPADA);
@@ -117,7 +113,7 @@ public class MesaServiceImpl implements IMesaService {
         MesaEntity mesa = mesaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Mesa", id));
         if (!Boolean.TRUE.equals(mesa.getCuentaAbierta())) {
-            throw new ReglaDeNegocioException("La mesa no tiene una cuenta abierta para cerrar.");
+            throw new ConflictoException("La mesa no tiene una cuenta abierta para cerrar.");
         }
         mesa.setCuentaAbierta(false);
         mesa.setEstado(EstadoMesa.DISPONIBLE);

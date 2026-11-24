@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface MesaRepository extends JpaRepository<MesaEntity, Long> {
+    boolean existsByNumero(Integer numero);
+    boolean existsByNumeroAndIdNot(Integer numero, Long id);
 }

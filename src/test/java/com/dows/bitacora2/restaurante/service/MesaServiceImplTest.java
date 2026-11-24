@@ -1,6 +1,7 @@
 package com.dows.bitacora2.restaurante.service;
 
 import com.dows.bitacora2.restaurante.exception.RecursoNoEncontradoException;
+import com.dows.bitacora2.restaurante.exception.ConflictoException;
 import com.dows.bitacora2.restaurante.mapper.MesaEntityMapper;
 import com.dows.bitacora2.restaurante.model.domain.EstadoMesa;
 import com.dows.bitacora2.restaurante.model.domain.Mesa;
@@ -78,5 +79,48 @@ class MesaServiceImplTest {
         assertNotNull(result);
         assertEquals(EstadoMesa.DISPONIBLE, result.getEstado());
         verify(mesaRepository).save(any());
+    }
+
+    @Test
+    void crear_NumeroDuplicado_DebeLanzarConflicto() {
+        when(mesaRepository.existsByNumero(5)).thenReturn(true);
+
+        assertThrows(ConflictoException.class, () -> mesaService.crear(mesa));
+        verify(mesaRepository, never()).save(any());
+    }
+
+    @Test
+    void actualizar_NumeroDeOtraMesa_DebeLanzarConflicto() {
+        when(mesaRepository.findById(1L)).thenReturn(Optional.of(mesaEntity));
+        when(mesaRepository.existsByNumeroAndIdNot(5, 1L)).thenReturn(true);
+
+        assertThrows(ConflictoException.class, () -> mesaService.actualizar(1L, mesa));
+        verify(mesaRepository, never()).save(any());
+    }
+
+    @Test
+    void actualizar_ConservaSuPropioNumero_NoEsConflicto() {
+        when(mesaRepository.findById(1L)).thenReturn(Optional.of(mesaEntity));
+        when(mesaRepository.existsByNumeroAndIdNot(5, 1L)).thenReturn(false);
+        when(mesaRepository.save(mesaEntity)).thenReturn(mesaEntity);
+        when(entityMapper.toDomain(mesaEntity)).thenReturn(mesa);
+
+        assertNotNull(mesaService.actualizar(1L, mesa));
+    }
+
+    @Test
+    void abrirCuenta_MesaConCuentaAbierta_DebeLanzarConflicto() {
+        mesaEntity.setCuentaAbierta(true);
+        when(mesaRepository.findById(1L)).thenReturn(Optional.of(mesaEntity));
+
+        assertThrows(ConflictoException.class, () -> mesaService.abrirCuenta(1L));
+    }
+
+    @Test
+    void cerrarCuenta_MesaSinCuentaAbierta_DebeLanzarConflicto() {
+        mesaEntity.setCuentaAbierta(false);
+        when(mesaRepository.findById(1L)).thenReturn(Optional.of(mesaEntity));
+
+        assertThrows(ConflictoException.class, () -> mesaService.cerrarCuenta(1L));
     }
 }
