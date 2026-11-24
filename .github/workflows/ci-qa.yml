@@ -2,9 +2,14 @@ name: CI — Build · Test · Deploy QA
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, 'feature/**' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
+
+# Una nueva ejecución en la misma rama cancela la anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/restaurante-api
@@ -23,15 +28,11 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: maven
 
-      - name: Cache Maven
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-
+      # Incluye las pruebas de integración con Testcontainers (Docker viene en el runner)
       - name: Ejecutar pruebas
-        run: mvn test --no-transfer-progress
+        run: mvn -B test --no-transfer-progress
 
       - name: Publicar reporte de cobertura
         if: always()
@@ -43,6 +44,8 @@ jobs:
   build-and-push:
     name: Build imagen Docker
     needs: test                     # solo si los tests pasan
+    # La imagen y el despliegue a QA solo salen de main; ramas y PRs solo ejecutan pruebas
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       image-tag: ${{ steps.meta.outputs.version }}
@@ -83,7 +86,7 @@ jobs:
     environment: qa                 # ambiente configurado en GitHub
     steps:
       - name: Login a Azure
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
