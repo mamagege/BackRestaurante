@@ -83,7 +83,6 @@ class CuentaServiceImplTest {
         when(cuentaRepository.findById(1L)).thenReturn(Optional.of(cuentaEntity));
         when(entityMapper.toDomain(cuentaEntity)).thenReturn(cuenta);
         when(pedidoRepository.findByIdCuenta(1L)).thenReturn(java.util.Collections.emptyList());
-        when(entityMapper.toEntity(cuenta)).thenReturn(cuentaEntity);
         when(cuentaRepository.save(cuentaEntity)).thenReturn(cuentaEntity);
 
         Cuenta result = cuentaService.pagar(1L, MetodoPago.EFECTIVO, 0.0);
@@ -141,12 +140,12 @@ class CuentaServiceImplTest {
         when(pedidoRepository.findByIdCuenta(1L)).thenReturn(java.util.List.of(
                 pedido(com.dows.bitacora2.restaurante.model.domain.EstadoPedido.ENTREGADO, 30000, 2),
                 pedido(com.dows.bitacora2.restaurante.model.domain.EstadoPedido.CANCELADO, 99999, 1)));
-        when(entityMapper.toEntity(cuenta)).thenReturn(cuentaEntity);
         when(cuentaRepository.save(cuentaEntity)).thenReturn(cuentaEntity);
 
         cuentaService.actualizarTotal(1L);
 
         assertEquals(60000.0, cuenta.getTotal());
+        verify(entityMapper).actualizarEntity(cuenta, cuentaEntity);
         // regresión: el total ya no se calcula con el historial de la mesa
         verify(pedidoRepository).findByIdCuenta(1L);
         verifyNoMoreInteractions(pedidoRepository);
@@ -158,7 +157,6 @@ class CuentaServiceImplTest {
         when(entityMapper.toDomain(cuentaEntity)).thenReturn(cuenta);
         when(pedidoRepository.findByIdCuenta(1L)).thenReturn(java.util.List.of(
                 pedido(com.dows.bitacora2.restaurante.model.domain.EstadoPedido.ENTREGADO, 12500.5, 2)));
-        when(entityMapper.toEntity(cuenta)).thenReturn(cuentaEntity);
         when(cuentaRepository.save(cuentaEntity)).thenReturn(cuentaEntity);
 
         cuentaService.pagar(1L, MetodoPago.EFECTIVO, 30000.0);
@@ -204,7 +202,6 @@ class CuentaServiceImplTest {
     @Test
     void pagar_Efectivo_NoUsaPasarelaYCalculaCambio() {
         cuentaConPedidoEntregado(58000);
-        when(entityMapper.toEntity(cuenta)).thenReturn(cuentaEntity);
         when(cuentaRepository.save(cuentaEntity)).thenReturn(cuentaEntity);
 
         cuentaService.pagar(1L, MetodoPago.EFECTIVO, 60000.0);
@@ -220,7 +217,6 @@ class CuentaServiceImplTest {
         cuentaConPedidoEntregado(58000);
         when(pasarelaPago.procesar(1L, MetodoPago.TARJETA, 58000.0))
                 .thenReturn(IPasarelaPago.ResultadoPago.aprobado("TX-123"));
-        when(entityMapper.toEntity(cuenta)).thenReturn(cuentaEntity);
         when(cuentaRepository.save(cuentaEntity)).thenReturn(cuentaEntity);
 
         cuentaService.pagar(1L, MetodoPago.TARJETA, 58000.0);

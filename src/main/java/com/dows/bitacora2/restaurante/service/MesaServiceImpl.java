@@ -26,12 +26,14 @@ public class MesaServiceImpl implements IMesaService {
     private final MesaEntityMapper entityMapper;
 
     @Override
+    @Transactional(readOnly = true)
     public List<Mesa> obtenerTodas() {
         log.info("Obteniendo todas las mesas");
         return entityMapper.toDomainList(mesaRepository.findAll());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Mesa> obtenerDisponibles() {
         return mesaRepository.findAll().stream()
                 .map(entityMapper::toDomain)
@@ -40,6 +42,7 @@ public class MesaServiceImpl implements IMesaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Mesa obtenerPorId(Long id) {
         log.debug("Buscando con id={}", id);
         return mesaRepository.findById(id)

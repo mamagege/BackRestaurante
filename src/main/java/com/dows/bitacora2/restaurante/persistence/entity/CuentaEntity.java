@@ -14,6 +14,11 @@ public class CuentaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Bloqueo optimista: una escritura con una versión obsoleta falla en lugar de pisar otra. */
+    @Version
+    @Column(nullable = false, columnDefinition = "bigint default 0")
+    private Long version;
+
     @Column(nullable = false)
     private Long idMesa;
 
@@ -43,6 +48,8 @@ public class CuentaEntity {
 
     public CuentaEntity() {}
 
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Long getIdMesa() { return idMesa; }

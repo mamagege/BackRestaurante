@@ -9,6 +9,9 @@ import com.dows.bitacora2.restaurante.model.domain.Cuenta;
 import com.dows.bitacora2.restaurante.model.domain.EstadoPedido;
 import com.dows.bitacora2.restaurante.model.domain.ItemPedido;
 import com.dows.bitacora2.restaurante.model.domain.Pedido;
+import com.dows.bitacora2.restaurante.model.domain.PedidoEstadoCambiado;
+import com.dows.bitacora2.restaurante.security.UsuarioActual;
+import org.springframework.context.ApplicationEventPublisher;
 import com.dows.bitacora2.restaurante.model.domain.Plato;
 import com.dows.bitacora2.restaurante.persistence.entity.PedidoEntity;
 import com.dows.bitacora2.restaurante.repository.PedidoRepository;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -30,15 +34,18 @@ public class PedidoServiceImpl implements IPedidoService {
     private final IPlatoService platoService;
     private final IMesaService mesaService;
     private final ICuentaService cuentaService;
-    private final com.dows.bitacora2.restaurante.repository.EventoPedidoMongoRepository eventoMongoRepo;
+    private final ApplicationEventPublisher eventos;
+    private final UsuarioActual usuarioActual;
 
     @Override
+    @Transactional(readOnly = true)
     public List<Pedido> obtenerTodos() {
         log.info("Obteniendo todos los pedidos");
         return entityMapper.toDomainList(pedidoRepository.findAll());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Pedido obtenerPorId(Long id) {
         log.debug("Buscando con id={}", id);
         return pedidoRepository.findById(id)
@@ -62,11 +69,7 @@ public class PedidoServiceImpl implements IPedidoService {
         PedidoEntity nuevo = pedidoRepository.save(entityMapper.toEntity(pedido));
         log.info("Pedido creado: id={}, mesa={}", nuevo.getId(), nuevo.getIdMesa());
 
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            eventoMongoRepo.save(new com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument(
-                nuevo.getId(), null, "RECIBIDO", java.time.LocalDateTime.now(), "Pedido inicializado"
-            ));
-        });
+        publicar(nuevo.getId(), null, EstadoPedido.RECIBIDO, "Pedido creado");
 
         return entityMapper.toDomain(nuevo);
     }
@@ -74,65 +77,72 @@ public class PedidoServiceImpl implements IPedidoService {
     @Override
     @Transactional
     public Pedido actualizar(Long id, Pedido nuevosDatos) {
-        Pedido existente = obtenerPorId(id);
-        
-        if (!existente.puedeModificarse()) {
+        PedidoEntity entity = buscarEntity(id);
+        if (entity.getEstado() != EstadoPedido.RECIBIDO) {
             throw new ReglaDeNegocioException("RN-04: El pedido solo puede modificarse en estado RECIBIDO.");
         }
 
         validarYCompletarItems(nuevosDatos.getItems());
-        existente.setItems(nuevosDatos.getItems());
-        
-        PedidoEntity entity = pedidoRepository.save(entityMapper.toEntity(existente));
+        // Se reemplazan los ítems sobre la entidad gestionada: orphanRemoval borra los anteriores
+        entity.getItems().clear();
+        nuevosDatos.getItems().forEach(item -> entity.getItems().add(entityMapper.toItemEntity(item)));
+
+        PedidoEntity guardado = pedidoRepository.save(entity);
         log.info("Pedido actualizado: id={}", id);
-        return entityMapper.toDomain(entity);
+        return entityMapper.toDomain(guardado);
     }
 
     @Override
     @Transactional
     public Pedido cambiarEstado(Long id, String estadoStr) {
-        Pedido pedido = obtenerPorId(id);
-        try {
-            EstadoPedido nuevoEstado = EstadoPedido.valueOf(estadoStr.toUpperCase());
-            
-            if (!pedido.getEstado().puedeTransicionarA(nuevoEstado)) {
-                throw new TransicionEstadoInvalidaException("No se puede pasar de " + pedido.getEstado() + " a " + nuevoEstado);
-            }
-            
-            String estadoAnterior = pedido.getEstado().name();
-            pedido.setEstado(nuevoEstado);
-            PedidoEntity entity = pedidoRepository.save(entityMapper.toEntity(pedido));
-            log.info("Estado de pedido id={} cambiado a {}", id, nuevoEstado);
-
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                eventoMongoRepo.save(new com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument(
-                    id, estadoAnterior, nuevoEstado.name(), java.time.LocalDateTime.now(), "Cambio de estado"
-                ));
-            });
-
-            return entityMapper.toDomain(entity);
-        } catch (IllegalArgumentException e) {
-            throw new EstadoInvalidoException("Estado de pedido inválido: " + estadoStr);
+        EstadoPedido nuevoEstado = parsearEstado(estadoStr);
+        PedidoEntity entity = buscarEntity(id);
+        EstadoPedido estadoAnterior = entity.getEstado();
+        if (!estadoAnterior.puedeTransicionarA(nuevoEstado)) {
+            throw new TransicionEstadoInvalidaException("No se puede pasar de " + estadoAnterior + " a " + nuevoEstado);
         }
+
+        entity.setEstado(nuevoEstado);
+        PedidoEntity guardado = pedidoRepository.save(entity);
+        log.info("Estado de pedido id={} cambiado de {} a {}", id, estadoAnterior, nuevoEstado);
+
+        publicar(id, estadoAnterior, nuevoEstado, "Cambio de estado");
+
+        return entityMapper.toDomain(guardado);
     }
 
     @Override
     @Transactional
     public void eliminar(Long id) {
-        Pedido pedido = obtenerPorId(id);
-        if (!pedido.puedeModificarse()) {
+        PedidoEntity entity = buscarEntity(id);
+        EstadoPedido estadoAnterior = entity.getEstado();
+        if (!estadoAnterior.esCancelable()) {
             throw new ReglaDeNegocioException("El pedido no se puede cancelar porque ya está en preparación o listo.");
         }
-        String estadoAnterior = pedido.getEstado().name();
-        pedido.setEstado(EstadoPedido.CANCELADO);
-        pedidoRepository.save(entityMapper.toEntity(pedido));
+        entity.setEstado(EstadoPedido.CANCELADO);
+        pedidoRepository.save(entity);
         log.info("Pedido cancelado: id={}", id);
 
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
-            eventoMongoRepo.save(new com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument(
-                id, estadoAnterior, "CANCELADO", java.time.LocalDateTime.now(), "Pedido cancelado"
-            ));
-        });
+        publicar(id, estadoAnterior, EstadoPedido.CANCELADO, "Pedido cancelado");
+    }
+
+    /** Se registra en auditoría solo si la transacción confirma (ver AuditoriaPedidoListener). */
+    private void publicar(Long pedidoId, EstadoPedido anterior, EstadoPedido nuevo, String descripcion) {
+        eventos.publishEvent(new PedidoEstadoCambiado(pedidoId, anterior, nuevo, usuarioActual.obtener(),
+                LocalDateTime.now(), descripcion));
+    }
+
+    private PedidoEntity buscarEntity(Long id) {
+        return pedidoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Pedido", id));
+    }
+
+    private static EstadoPedido parsearEstado(String estadoStr) {
+        try {
+            return EstadoPedido.valueOf(estadoStr.strip().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new EstadoInvalidoException("Estado de pedido inválido: " + estadoStr);
+        }
     }
 
     /** Asocia cada ítem a su plato: disponibilidad, personalización (RN-01/RN-02/pasta) y precio congelado (RN-03). */
@@ -144,6 +154,7 @@ public class PedidoServiceImpl implements IPedidoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public com.dows.bitacora2.restaurante.model.dto.response.ResumenDiaDTO resumenDelDia() {
         java.util.List<com.dows.bitacora2.restaurante.persistence.entity.PedidoEntity> pedidos = pedidoRepository.findAll();
 
