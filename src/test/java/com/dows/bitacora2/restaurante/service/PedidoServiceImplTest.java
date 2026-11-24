@@ -106,7 +106,7 @@ class PedidoServiceImplTest {
         assertEquals(15.0, pedidoBase.getItems().get(0).getPrecioCongelado()); // RN-03 Precio Congelado
         assertEquals("Pizza Margarita", pedidoBase.getItems().get(0).getNombrePlato());
         verify(pedidoRepository, times(1)).save(any());
-        // No verificamos el async acÃ¡ directamente por complejidad de hilos en JUnit bÃ¡sico, pero validamos interacciones base.
+        // No verificamos el async acá directamente por complejidad de hilos en JUnit básico, pero validamos interacciones base.
     }
 
     @Test
