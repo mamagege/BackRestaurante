@@ -2,37 +2,38 @@ package com.dows.bitacora2.restaurante.config;
 
 import com.dows.bitacora2.restaurante.persistence.entity.UsuarioEntity;
 import com.dows.bitacora2.restaurante.repository.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+/**
+ * Crea un usuario por rol para desarrollo local.
+ * Solo se activa con SEED_ENABLED=true; en QA y producción queda apagado por defecto
+ * para que nunca existan cuentas con contraseñas conocidas.
+ */
+@Slf4j
 @Component
+@RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "app.seed", name = "enabled", havingValue = "true")
 public class DataSeeder implements CommandLineRunner {
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public DataSeeder(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
-        this.usuarioRepository = usuarioRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
-
     @Override
-    public void run(String... args) throws Exception {
-        // Verifica si la tabla de usuarios está vacía
-        if (usuarioRepository.count() == 0) {
-            crearUsuario("admin@restaurante.com", "admin123", "ADMIN");
-            crearUsuario("mesero@restaurante.com", "mesero123", "MESERO");
-            crearUsuario("cocina@restaurante.com", "cocina123", "COCINA");
-            crearUsuario("cliente@restaurante.com", "cliente123", "CLIENTE");
-            
-            System.out.println("====== USUARIOS POR DEFECTO CREADOS ======");
-            System.out.println("ADMIN:   admin@restaurante.com   / admin123");
-            System.out.println("MESERO:  mesero@restaurante.com  / mesero123");
-            System.out.println("COCINA:  cocina@restaurante.com  / cocina123");
-            System.out.println("CLIENTE: cliente@restaurante.com / cliente123");
-            System.out.println("==========================================");
+    public void run(String... args) {
+        if (usuarioRepository.count() > 0) {
+            return;
         }
+        crearUsuario("admin@restaurante.com", "admin123", "ADMIN");
+        crearUsuario("mesero@restaurante.com", "mesero123", "MESERO");
+        crearUsuario("cocina@restaurante.com", "cocina123", "COCINA");
+        crearUsuario("cliente@restaurante.com", "cliente123", "CLIENTE");
+        log.warn("Usuarios de desarrollo creados (admin, mesero, cocina, cliente @restaurante.com). "
+                + "No habilitar SEED_ENABLED fuera de desarrollo.");
     }
 
     private void crearUsuario(String email, String password, String rol) {

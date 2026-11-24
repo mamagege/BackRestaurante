@@ -5,6 +5,7 @@ import com.dows.bitacora2.restaurante.model.dto.response.ErrorResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -42,6 +43,14 @@ public class GlobalExceptionHandler {
         log.warn("Bloqueo temporal: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(ErrorResponseDTO.of(429, "Too Many Requests", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponseDTO> handleAutenticacion(AuthenticationException ex, HttpServletRequest request) {
+        // Mensaje genérico a propósito: no revelar si el email existe o si falló la contraseña
+        log.warn("Autenticación fallida en {}: {}", request.getRequestURI(), ex.getClass().getSimpleName());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponseDTO.of(401, "Unauthorized", "Credenciales inválidas", request.getRequestURI()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

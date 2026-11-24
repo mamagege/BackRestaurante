@@ -24,7 +24,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity(proxyTargetClass = true)
 public class SecurityConfig {
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
@@ -42,35 +42,46 @@ public class SecurityConfig {
                         .xssProtection(xss -> xss.headerValue( // activa filtro XSS del navegador
                                 org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK)))
                 .authorizeHttpRequests(auth -> auth
+                        // ── Público ────────────────────────────────────────────
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/platos/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/platos").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/platos/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/platos/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/platos/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/platos/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/menu", "/api/v1/menu/**").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/pedidos/**")
+                        // ── Platos (administración de la carta) ────────────────
+                        .requestMatchers(HttpMethod.POST, "/api/v1/platos").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/platos/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/platos/*/disponibilidad").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/platos/*").hasRole("ADMIN")
+
+                        // ── Pedidos ────────────────────────────────────────────
+                        .requestMatchers(HttpMethod.GET, "/api/v1/pedidos/resumen").hasAnyRole("ADMIN", "MESERO")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/pedidos", "/api/v1/pedidos/*")
                         .hasAnyRole("MESERO", "COCINA", "ADMIN", "CLIENTE")
                         .requestMatchers(HttpMethod.POST, "/api/v1/pedidos").hasAnyRole("CLIENTE", "MESERO")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/pedidos/**").hasAnyRole("CLIENTE", "MESERO")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/pedidos/*").hasAnyRole("CLIENTE", "MESERO")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/pedidos/*/estado").hasAnyRole("COCINA", "MESERO")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/pedidos/**").hasAnyRole("MESERO", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/pedidos/*").hasAnyRole("MESERO", "ADMIN")
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/mesas/**").hasAnyRole("CLIENTE", "MESERO", "ADMIN")
+                        // ── Mesas ──────────────────────────────────────────────
+                        .requestMatchers(HttpMethod.GET, "/api/v1/mesas", "/api/v1/mesas/*")
+                        .hasAnyRole("CLIENTE", "MESERO", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/mesas").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/mesas/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/mesas/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/mesas/*/estado").hasAnyRole("MESERO", "ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/mesas/*/abrir-cuenta")
-                        .hasAnyRole("CLIENTE", "MESERO")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/mesas/*/cerrar-cuenta").hasRole("MESERO")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/mesas/*/apertura-cuenta").hasAnyRole("CLIENTE", "MESERO")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/mesas/*/cierre-cuenta").hasAnyRole("MESERO", "ADMIN")
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/cuentas/**").hasAnyRole("CLIENTE", "MESERO", "ADMIN")
+                        // ── Cuentas ────────────────────────────────────────────
+                        .requestMatchers(HttpMethod.GET, "/api/v1/cuentas", "/api/v1/cuentas/*")
+                        .hasAnyRole("CLIENTE", "MESERO", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/cuentas").hasAnyRole("CLIENTE", "MESERO")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/cuentas/*/actualizar-total")
-                        .hasAnyRole("CLIENTE", "MESERO")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/cuentas/*/pagar").hasRole("MESERO")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/cuentas/*/total").hasAnyRole("CLIENTE", "MESERO")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/cuentas/*/pago").hasAnyRole("MESERO", "ADMIN")
 
+                        // Cualquier otra ruta de la API se niega: un endpoint nuevo
+                        // debe declararse aquí de forma explícita para quedar expuesto.
+                        .requestMatchers("/api/**").denyAll()
                         .anyRequest().authenticated())
                 .httpBasic(basic -> basic.disable())
                 .oauth2Login(oauth2 -> oauth2

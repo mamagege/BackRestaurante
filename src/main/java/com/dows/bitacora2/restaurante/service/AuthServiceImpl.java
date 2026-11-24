@@ -3,37 +3,32 @@ package com.dows.bitacora2.restaurante.service;
 import com.dows.bitacora2.restaurante.exception.BloqueoTemporalException;
 import com.dows.bitacora2.restaurante.model.dto.auth.LoginRequestDTO;
 import com.dows.bitacora2.restaurante.security.JwtUtil;
+import com.dows.bitacora2.restaurante.security.LoginAttemptService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-import java.util.concurrent.ConcurrentHashMap;
 
-
-
+@Slf4j
 @Service
-@lombok.extern.slf4j.Slf4j
-@lombok.RequiredArgsConstructor
+@RequiredArgsConstructor
 public class AuthServiceImpl implements IAuthService {
 
-    
-    
     private final AuthenticationManager authManager;
     private final JwtUtil jwtUtil;
-    
-    // NOTA: Para cumplir 100% con Stateless real y escalabilidad horizontal, 
-    // este estado debería migrar a una BD o Redis. Se encapsula aquí para 
-    // respetar MVC y Single Responsibility Principle.
-    private final ConcurrentHashMap<String, Integer> intentosFallidos = new ConcurrentHashMap<>();
+    private final LoginAttemptService intentos;
 
     @Override
     public String autenticarYGenerarToken(LoginRequestDTO dto) {
         String email = dto.email();
-        if (intentosFallidos.getOrDefault(email, 0) >= 5) {
-            log.warn("Bloqueo temporal por intentos fallidos para el usuario: {}", email);
-            throw new BloqueoTemporalException("Usuario temporalmente bloqueado por demasiados intentos fallidos");
+        if (intentos.estaBloqueado(email)) {
+            log.warn("Login rechazado por bloqueo temporal: {}", email);
+            throw new BloqueoTemporalException("Usuario temporalmente bloqueado por demasiados intentos fallidos. "
+                    + "Intente de nuevo en " + intentos.minutosDeBloqueo() + " minutos.");
         }
 
         try {
@@ -42,16 +37,13 @@ public class AuthServiceImpl implements IAuthService {
             UserDetails user = (UserDetails) auth.getPrincipal();
             String token = jwtUtil.generateToken(user.getUsername(),
                     user.getAuthorities().iterator().next().getAuthority());
-            
-            // Éxito: limpiar intentos
-            intentosFallidos.remove(email);
-            log.info("Login exitoso para el usuario: {}", email);
-            
+            intentos.registrarExito(email);
+            log.info("Login exitoso: {}", email);
             return token;
         } catch (AuthenticationException e) {
-            intentosFallidos.put(email, intentosFallidos.getOrDefault(email, 0) + 1);
-            log.warn("Intento de login fallido ({}) para el usuario: {}", intentosFallidos.get(email), email);
-            throw e; // Deja que Spring maneje el error y devuelva 401
+            intentos.registrarFallo(email);
+            log.warn("Login fallido: {}", email);
+            throw e; // GlobalExceptionHandler la traduce a 401
         }
     }
 }

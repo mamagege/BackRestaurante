@@ -18,6 +18,7 @@ services:
       MONGO_PORT: 27017
       MONGO_DB: restaurante
       JWT_SECRET: ${JWT_SECRET}   # viene del .env — no hardcodeado aquí
+      SEED_ENABLED: "true"        # usuarios de prueba, solo para el entorno local
     depends_on:
       postgres:
         condition: service_healthy
