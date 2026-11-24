@@ -42,3 +42,8 @@ buildNumber.properties
 
 # Certificados SSL
 *.p12
+
+# IDEs
+.idea/
+.vscode/
+*.iml
