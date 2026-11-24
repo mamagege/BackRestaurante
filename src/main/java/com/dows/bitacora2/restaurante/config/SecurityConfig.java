@@ -1,6 +1,8 @@
 package com.dows.bitacora2.restaurante.config;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
@@ -33,8 +35,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, UsuarioRepository usuarioRepository,
             JwtAuthFilter jwtAuthFilter, com.dows.bitacora2.restaurante.security.JwtUtil jwtUtil,
             ProblemDetailSecurityHandler problemDetailSecurityHandler,
-            org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource) throws Exception {
-        return http
+            org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource,
+            ObjectProvider<ClientRegistrationRepository> clientRegistrations) throws Exception {
+        http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers
@@ -85,14 +88,17 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").denyAll()
                         .anyRequest().authenticated())
                 .httpBasic(basic -> basic.disable())
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(oAuth2SuccessHandler(usuarioRepository, jwtUtil)))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(problemDetailSecurityHandler)
                         .accessDeniedHandler(problemDetailSecurityHandler))
                 // No se usa STATELESS porque rompería OAuth2
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // Login con Google solo si el perfil "oauth" registró un cliente OAuth2
+        if (clientRegistrations.getIfAvailable() != null) {
+            http.oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler(usuarioRepository, jwtUtil)));
+        }
+        return http.build();
     }
 
     private AuthenticationSuccessHandler oAuth2SuccessHandler(UsuarioRepository usuarioRepository,
