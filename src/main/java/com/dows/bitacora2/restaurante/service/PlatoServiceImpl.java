@@ -25,6 +25,7 @@ public class PlatoServiceImpl implements IPlatoService {
     private final IPlatoValidator validator;
 
     @Override
+    @Transactional(readOnly = true)
     public List<Plato> obtenerTodos() {
         List<PlatoEntity> entities = platoRepository.findAll();
         log.info("Obteniendo todos los platos. Total: {}", entities.size());
@@ -32,16 +33,19 @@ public class PlatoServiceImpl implements IPlatoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Plato> obtenerDisponibles() {
         return entityMapper.toDomainList(platoRepository.findByDisponibleTrue());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Plato> obtenerPorCategoria(String categoria) {
         return entityMapper.toDomainList(platoRepository.findByCategoriaIgnoreCase(categoria));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Plato obtenerPorId(Long id) {
         log.debug("Buscando plato con id={}", id);
         return platoRepository.findById(id)

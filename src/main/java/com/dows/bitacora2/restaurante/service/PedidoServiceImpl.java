@@ -33,12 +33,14 @@ public class PedidoServiceImpl implements IPedidoService {
     private final com.dows.bitacora2.restaurante.repository.EventoPedidoMongoRepository eventoMongoRepo;
 
     @Override
+    @Transactional(readOnly = true)
     public List<Pedido> obtenerTodos() {
         log.info("Obteniendo todos los pedidos");
         return entityMapper.toDomainList(pedidoRepository.findAll());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Pedido obtenerPorId(Long id) {
         log.debug("Buscando con id={}", id);
         return pedidoRepository.findById(id)
@@ -153,6 +155,7 @@ public class PedidoServiceImpl implements IPedidoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public com.dows.bitacora2.restaurante.model.dto.response.ResumenDiaDTO resumenDelDia() {
         java.util.List<com.dows.bitacora2.restaurante.persistence.entity.PedidoEntity> pedidos = pedidoRepository.findAll();
 
