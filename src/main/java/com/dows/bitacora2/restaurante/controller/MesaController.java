@@ -63,20 +63,4 @@ public class MesaController implements MesaApi {
         Mesa actualizada = mesaService.cambiarEstado(id, estado);
         return ResponseEntity.ok(mesaMapper.toResponse(actualizada));
     }
-
-    @Override
-    @PatchMapping("/{id}/apertura-cuenta")
-    @PreAuthorize("hasAnyRole('CLIENTE', 'MESERO')")
-    public ResponseEntity<MesaResponseDTO> abrirCuenta(@PathVariable Long id) {
-        Mesa actualizada = mesaService.abrirCuenta(id);
-        return ResponseEntity.ok(mesaMapper.toResponse(actualizada));
-    }
-
-    @Override
-    @PatchMapping("/{id}/cierre-cuenta")
-    @PreAuthorize("hasAnyRole('MESERO', 'ADMIN')")
-    public ResponseEntity<MesaResponseDTO> cerrarCuenta(@PathVariable Long id) {
-        Mesa actualizada = mesaService.cerrarCuenta(id);
-        return ResponseEntity.ok(mesaMapper.toResponse(actualizada));
-    }
 }

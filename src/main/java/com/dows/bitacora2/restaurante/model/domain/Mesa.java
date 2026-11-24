@@ -1,5 +1,8 @@
 package com.dows.bitacora2.restaurante.model.domain;
 
+import com.dows.bitacora2.restaurante.exception.ConflictoException;
+import com.dows.bitacora2.restaurante.exception.ReglaDeNegocioException;
+
 public class Mesa {
     private Long id;
     private Integer numero;
@@ -15,6 +18,20 @@ public class Mesa {
         this.capacidad = capacidad;
         this.estado = estado;
         this.cuentaAbierta = cuentaAbierta;
+    }
+
+    /**
+     * Cambio de estado manual (reservar o liberar una reserva). La ocupación la gobierna
+     * la cuenta: OCUPADA se asigna al abrirla y la mesa se libera solo al pagarla (RN-07).
+     */
+    public void cambiarEstadoManual(EstadoMesa nuevo) {
+        if (Boolean.TRUE.equals(cuentaAbierta)) {
+            throw new ConflictoException("La mesa tiene una cuenta abierta; se libera al registrar el pago.");
+        }
+        if (nuevo == EstadoMesa.OCUPADA) {
+            throw new ReglaDeNegocioException("El estado OCUPADA se asigna automáticamente al abrir una cuenta.");
+        }
+        this.estado = nuevo;
     }
 
     public boolean estaDisponible() {

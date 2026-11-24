@@ -119,8 +119,9 @@ class SecurityTest {
                 fila("POST", "/api/v1/mesas", MESA, "ADMIN"),
                 fila("PUT", "/api/v1/mesas/1", MESA, "ADMIN"),
                 fila("PATCH", "/api/v1/mesas/1/estado?estado=OCUPADA", null, "MESERO", "ADMIN"),
-                fila("PATCH", "/api/v1/mesas/1/apertura-cuenta", null, "CLIENTE", "MESERO"),
-                fila("PATCH", "/api/v1/mesas/1/cierre-cuenta", null, "MESERO", "ADMIN"),
+                // eliminados: la mesa solo se ocupa/libera a través de la cuenta (RN-07)
+                fila("PATCH", "/api/v1/mesas/1/apertura-cuenta", null),
+                fila("PATCH", "/api/v1/mesas/1/cierre-cuenta", null),
 
                 fila("GET", "/api/v1/cuentas", null, "CLIENTE", "MESERO", "ADMIN"),
                 fila("GET", "/api/v1/cuentas/1", null, "CLIENTE", "MESERO", "ADMIN"),

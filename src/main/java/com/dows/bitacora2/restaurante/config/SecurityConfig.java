@@ -71,8 +71,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/mesas").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/mesas/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/mesas/*/estado").hasAnyRole("MESERO", "ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/mesas/*/apertura-cuenta").hasAnyRole("CLIENTE", "MESERO")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/mesas/*/cierre-cuenta").hasAnyRole("MESERO", "ADMIN")
+                        // La mesa se ocupa al abrir una cuenta y se libera al pagarla (ver /cuentas)
 
                         // ── Cuentas ────────────────────────────────────────────
                         .requestMatchers(HttpMethod.GET, "/api/v1/cuentas", "/api/v1/cuentas/*")

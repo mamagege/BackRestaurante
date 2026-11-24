@@ -10,6 +10,8 @@ public interface IMesaService {
     Mesa crear(Mesa mesa);
     Mesa actualizar(Long id, Mesa mesa);
     Mesa cambiarEstado(Long id, String estado);
+    /** Uso interno de ICuentaService al abrir una cuenta: marca la mesa como OCUPADA. */
     Mesa abrirCuenta(Long id);
+    /** Uso interno de ICuentaService al registrar el pago: libera la mesa. */
     Mesa cerrarCuenta(Long id);
 }
