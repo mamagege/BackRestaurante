@@ -73,4 +73,24 @@ class AuthControllerTest {
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.codigo").value("DEMASIADOS_INTENTOS"));
     }
+
+    @Test
+    @DisplayName("registro exitoso devuelve 201 con el token")
+    void registro_valido_devuelve201() throws Exception {
+        when(authService.registrarCliente("nuevo@correo.com", "secreto123")).thenReturn("jwt-cliente");
+
+        mockMvc.perform(post("/api/v1/auth/registro").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"nuevo@correo.com\",\"password\":\"secreto123\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.token").value("jwt-cliente"));
+    }
+
+    @Test
+    @DisplayName("registro con password corto devuelve 400 con el campo inválido")
+    void registro_passwordCorto_devuelve400() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/registro").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"nuevo@correo.com\",\"password\":\"123\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores[0].campo").value("password"));
+    }
 }

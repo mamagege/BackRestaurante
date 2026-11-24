@@ -7,6 +7,7 @@ public class Pedido {
     private Long id;
     private Long idMesa;
     private Long idCuenta;
+    private String creadoPor;
     private List<ItemPedido> items;
     private EstadoPedido estado;
     private LocalDateTime timestamp;
@@ -27,6 +28,8 @@ public class Pedido {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getCreadoPor() { return creadoPor; }
+    public void setCreadoPor(String creadoPor) { this.creadoPor = creadoPor; }
     public Long getIdCuenta() { return idCuenta; }
     public void setIdCuenta(Long idCuenta) { this.idCuenta = idCuenta; }
     public Long getIdMesa() { return idMesa; }

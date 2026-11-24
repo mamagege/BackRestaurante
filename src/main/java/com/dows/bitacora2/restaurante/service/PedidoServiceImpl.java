@@ -20,7 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 
+import com.dows.bitacora2.restaurante.model.domain.ResumenVentas;
+import com.dows.bitacora2.restaurante.util.CalculoUtils;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
 
 @Service
@@ -46,6 +54,23 @@ public class PedidoServiceImpl implements IPedidoService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<Pedido> buscar(Collection<EstadoPedido> estados, Long idCuenta) {
+        boolean filtrarEstados = estados != null && !estados.isEmpty();
+        List<PedidoEntity> pedidos;
+        if (idCuenta != null) {
+            pedidos = pedidoRepository.findByIdCuentaOrderByTimestampAsc(idCuenta).stream()
+                    .filter(p -> !filtrarEstados || estados.contains(p.getEstado()))
+                    .toList();
+        } else if (filtrarEstados) {
+            pedidos = pedidoRepository.findByEstadoInOrderByTimestampAsc(estados);
+        } else {
+            pedidos = pedidoRepository.findAllByOrderByTimestampAsc();
+        }
+        return entityMapper.toDomainList(pedidos);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Pedido obtenerPorId(Long id) {
         log.debug("Buscando con id={}", id);
         return pedidoRepository.findById(id)
@@ -64,6 +89,7 @@ public class PedidoServiceImpl implements IPedidoService {
 
         validarYCompletarItems(pedido.getItems());
         pedido.setIdCuenta(cuenta.getId());
+        pedido.setCreadoPor(usuarioActual.obtener());
 
         pedido.setEstado(EstadoPedido.RECIBIDO);
         PedidoEntity nuevo = pedidoRepository.save(entityMapper.toEntity(pedido));
@@ -155,23 +181,46 @@ public class PedidoServiceImpl implements IPedidoService {
 
     @Override
     @Transactional(readOnly = true)
-    public com.dows.bitacora2.restaurante.model.dto.response.ResumenDiaDTO resumenDelDia() {
-        java.util.List<com.dows.bitacora2.restaurante.persistence.entity.PedidoEntity> pedidos = pedidoRepository.findAll();
+    public ResumenVentas resumenDelDia(LocalDate fecha) {
+        List<PedidoEntity> pedidos = pedidoRepository
+                .findByTimestampGreaterThanEqualAndTimestampLessThan(fecha.atStartOfDay(), fecha.plusDays(1).atStartOfDay())
+                .stream()
+                .filter(p -> p.getEstado() != EstadoPedido.CANCELADO)
+                .toList();
 
-        long totalPedidos = pedidos.stream().count();
+        Map<String, long[]> cantidades = new LinkedHashMap<>();
+        Map<String, Double> ingresosPorPlato = new LinkedHashMap<>();
+        Map<String, Long> pedidosPorUsuario = new LinkedHashMap<>();
+        Map<String, Double> ingresosPorUsuario = new LinkedHashMap<>();
+        double ingresoTotal = 0;
 
-        double ingresoTotal = pedidos.stream()
-                .flatMap(p -> p.getItems().stream())
-                .mapToDouble(item -> item.getPrecioCongelado() * item.getCantidad())
-                .sum();
+        for (PedidoEntity pedido : pedidos) {
+            String usuario = pedido.getCreadoPor() != null ? pedido.getCreadoPor() : "desconocido";
+            double totalPedido = 0;
+            for (var item : pedido.getItems()) {
+                double subtotal = item.getPrecioCongelado() * item.getCantidad();
+                totalPedido += subtotal;
+                cantidades.computeIfAbsent(item.getNombrePlato(), k -> new long[1])[0] += item.getCantidad();
+                ingresosPorPlato.merge(item.getNombrePlato(), subtotal, Double::sum);
+            }
+            ingresoTotal += totalPedido;
+            pedidosPorUsuario.merge(usuario, 1L, Long::sum);
+            ingresosPorUsuario.merge(usuario, totalPedido, Double::sum);
+        }
 
-        java.util.Map<String, Long> platosMasPedidos = pedidos.stream()
-                .flatMap(p -> p.getItems().stream())
-                .collect(java.util.stream.Collectors.groupingBy(
-                        item -> item.getNombrePlato(),
-                        java.util.stream.Collectors.counting()
-                ));
+        List<ResumenVentas.VentaPlato> porPlato = cantidades.entrySet().stream()
+                .map(e -> new ResumenVentas.VentaPlato(e.getKey(), e.getValue()[0],
+                        CalculoUtils.redondear(ingresosPorPlato.get(e.getKey()))))
+                .sorted(Comparator.comparingLong(ResumenVentas.VentaPlato::cantidad).reversed()
+                        .thenComparing(ResumenVentas.VentaPlato::plato))
+                .toList();
+        List<ResumenVentas.VentaUsuario> porUsuario = pedidosPorUsuario.entrySet().stream()
+                .map(e -> new ResumenVentas.VentaUsuario(e.getKey(), e.getValue(),
+                        CalculoUtils.redondear(ingresosPorUsuario.get(e.getKey()))))
+                .sorted(Comparator.comparingDouble(ResumenVentas.VentaUsuario::ingresos).reversed()
+                        .thenComparing(ResumenVentas.VentaUsuario::usuario))
+                .toList();
 
-        return new com.dows.bitacora2.restaurante.model.dto.response.ResumenDiaDTO(totalPedidos, ingresoTotal, platosMasPedidos);
+        return new ResumenVentas(fecha, pedidos.size(), CalculoUtils.redondear(ingresoTotal), porPlato, porUsuario);
     }
 }

@@ -1,5 +1,6 @@
 package com.dows.bitacora2.restaurante.controller.docs;
 
+import com.dows.bitacora2.restaurante.model.domain.EstadoCuenta;
 import com.dows.bitacora2.restaurante.model.dto.request.CuentaRequestDTO;
 import com.dows.bitacora2.restaurante.model.dto.request.PagoRequestDTO;
 import com.dows.bitacora2.restaurante.model.dto.response.CuentaResponseDTO;
@@ -12,13 +13,15 @@ import java.util.List;
 
 @Tag(name = "Cuentas", description = "Administración de cuentas y pagos del restaurante")
 public interface CuentaApi {
-    @Operation(summary = "Listar todas las cuentas")
+    @Operation(summary = "Listar cuentas",
+            description = "Filtros opcionales: idMesa y estado (ABIERTA, CERRADA). "
+                    + "Ejemplo: ?idMesa=3&estado=ABIERTA devuelve la cuenta abierta de la mesa.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista de cuentas"),
         @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente.")
     })
-    ResponseEntity<List<CuentaResponseDTO>> listar();
+    ResponseEntity<List<CuentaResponseDTO>> listar(Long idMesa, EstadoCuenta estado);
 
     @Operation(summary = "Obtener cuenta por ID")
     @ApiResponses({

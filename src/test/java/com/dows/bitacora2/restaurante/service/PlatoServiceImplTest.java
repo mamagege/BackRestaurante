@@ -117,4 +117,24 @@ class PlatoServiceImplTest {
         assertNotNull(resultado);
         assertTrue(resultado.isEmpty());
     }
+
+    @Test
+    void obtenerDisponiblePorId_NoDisponible_LanzaRecursoNoEncontrado() {
+        when(platoRepository.findByIdAndDisponibleTrue(5L)).thenReturn(Optional.empty());
+
+        com.dows.bitacora2.restaurante.exception.RecursoNoEncontradoException ex = assertThrows(
+                com.dows.bitacora2.restaurante.exception.RecursoNoEncontradoException.class,
+                () -> platoService.obtenerDisponiblePorId(5L));
+        assertTrue(ex.getMessage().contains("Plato disponible"));
+    }
+
+    @Test
+    void obtenerDisponiblesPorCategoria_FiltraEnLaBaseDeDatos() {
+        when(platoRepository.findByCategoriaIgnoreCaseAndDisponibleTrue("pizza")).thenReturn(java.util.List.of());
+
+        platoService.obtenerDisponiblesPorCategoria("pizza");
+
+        verify(platoRepository).findByCategoriaIgnoreCaseAndDisponibleTrue("pizza");
+        verify(platoRepository, never()).findByCategoriaIgnoreCase(any());
+    }
 }

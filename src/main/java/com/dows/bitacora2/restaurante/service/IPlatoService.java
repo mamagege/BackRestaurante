@@ -8,6 +8,9 @@ public interface IPlatoService {
     List<Plato>  obtenerDisponibles();
     List<Plato>  obtenerPorCategoria(String categoria);
     Plato        obtenerPorId(Long id);
+    /** Plato de la carta pública: si no existe o no está disponible, 404. */
+    Plato        obtenerDisponiblePorId(Long id);
+    List<Plato>  obtenerDisponiblesPorCategoria(String categoria);
     Plato        crear(Plato plato);
     Plato        actualizar(Long id, Plato plato);
     Plato        cambiarDisponibilidad(Long id, boolean disponible);

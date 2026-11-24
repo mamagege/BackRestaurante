@@ -3,6 +3,7 @@ package com.dows.bitacora2.restaurante.controller;
 import com.dows.bitacora2.restaurante.controller.docs.CuentaApi;
 import com.dows.bitacora2.restaurante.mapper.CuentaMapper;
 import com.dows.bitacora2.restaurante.model.domain.Cuenta;
+import com.dows.bitacora2.restaurante.model.domain.EstadoCuenta;
 import com.dows.bitacora2.restaurante.model.dto.request.CuentaRequestDTO;
 import com.dows.bitacora2.restaurante.model.dto.request.PagoRequestDTO;
 import com.dows.bitacora2.restaurante.model.dto.response.CuentaResponseDTO;
@@ -26,8 +27,9 @@ public class CuentaController implements CuentaApi {
     @Override
     @GetMapping
     @PreAuthorize("hasAnyRole('CLIENTE', 'MESERO', 'ADMIN')")
-    public ResponseEntity<List<CuentaResponseDTO>> listar() {
-        List<Cuenta> cuentas = cuentaService.obtenerTodas();
+    public ResponseEntity<List<CuentaResponseDTO>> listar(@RequestParam(required = false) Long idMesa,
+                                                          @RequestParam(required = false) EstadoCuenta estado) {
+        List<Cuenta> cuentas = cuentaService.buscar(idMesa, estado);
         return ResponseEntity.ok(cuentaMapper.toResponseList(cuentas));
     }
 

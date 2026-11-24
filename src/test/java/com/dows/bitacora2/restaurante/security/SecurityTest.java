@@ -94,6 +94,8 @@ class SecurityTest {
     private static Stream<Arguments> matriz() {
         return Stream.of(
                 fila("POST", "/api/v1/auth/login", LOGIN, PUBLICO),
+                fila("POST", "/api/v1/auth/registro", LOGIN, PUBLICO),
+                fila("GET", "/api/v1/auth/me", null, "ADMIN", "MESERO", "COCINA", "CLIENTE"),
 
                 fila("GET", "/api/v1/menu", null, PUBLICO),
                 fila("GET", "/api/v1/menu/1", null, PUBLICO),
@@ -207,6 +209,15 @@ class SecurityTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.codigo").value("ACCESO_DENEGADO"))
                 .andExpect(jsonPath("$.detail").value("No tiene permisos para realizar esta acción"));
+    }
+
+    @Test
+    @DisplayName("GET /auth/me devuelve el email y el rol del token")
+    void perfil_devuelveEmailYRol() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", tokenDe("cocina@restaurante.com", "COCINA")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("cocina@restaurante.com"))
+                .andExpect(jsonPath("$.rol").value("COCINA"));
     }
 
     private static Arguments fila(String metodo, String ruta, String body, String... permitidos) {

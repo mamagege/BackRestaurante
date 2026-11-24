@@ -249,4 +249,14 @@ class CuentaServiceImplTest {
         verifyNoInteractions(pasarelaPago);
         verify(mesaService, never()).cerrarCuenta(any());
     }
+
+    @Test
+    void buscar_PorMesaYEstado_UsaLaConsultaCombinada() {
+        when(cuentaRepository.findByIdMesaAndEstadoOrderByFechaAperturaDesc(2L, EstadoCuenta.ABIERTA))
+                .thenReturn(java.util.List.of(cuentaEntity));
+
+        cuentaService.buscar(2L, EstadoCuenta.ABIERTA);
+
+        verify(entityMapper).toDomainList(java.util.List.of(cuentaEntity));
+    }
 }

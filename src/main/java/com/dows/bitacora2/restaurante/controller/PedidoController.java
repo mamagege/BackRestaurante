@@ -2,7 +2,11 @@ package com.dows.bitacora2.restaurante.controller;
 
 import com.dows.bitacora2.restaurante.controller.docs.PedidoApi;
 import com.dows.bitacora2.restaurante.mapper.PedidoMapper;
+import com.dows.bitacora2.restaurante.model.domain.EstadoPedido;
 import com.dows.bitacora2.restaurante.model.domain.Pedido;
+import com.dows.bitacora2.restaurante.model.dto.response.ResumenDiaDTO;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
 import com.dows.bitacora2.restaurante.model.dto.request.PedidoRequestDTO;
 import com.dows.bitacora2.restaurante.model.dto.response.PedidoResponseDTO;
 import com.dows.bitacora2.restaurante.service.IPedidoService;
@@ -25,8 +29,10 @@ public class PedidoController implements PedidoApi {
     @Override
     @GetMapping
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('MESERO', 'COCINA', 'ADMIN', 'CLIENTE')")
-    public ResponseEntity<List<PedidoResponseDTO>> listar() {
-        List<Pedido> pedidos = pedidoService.obtenerTodos();
+    public ResponseEntity<List<PedidoResponseDTO>> listar(
+            @RequestParam(name = "estado", required = false) List<EstadoPedido> estados,
+            @RequestParam(required = false) Long idCuenta) {
+        List<Pedido> pedidos = pedidoService.buscar(estados, idCuenta);
         return ResponseEntity.ok(pedidoMapper.toResponseList(pedidos));
     }
 
@@ -75,7 +81,9 @@ public class PedidoController implements PedidoApi {
     @Override
     @GetMapping("/resumen")
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MESERO')")
-    public ResponseEntity<com.dows.bitacora2.restaurante.model.dto.response.ResumenDiaDTO> resumenDelDia() {
-        return ResponseEntity.ok(pedidoService.resumenDelDia());
+    public ResponseEntity<ResumenDiaDTO> resumenDelDia(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha) {
+        LocalDate dia = fecha != null ? fecha : LocalDate.now();
+        return ResponseEntity.ok(ResumenDiaDTO.desde(pedidoService.resumenDelDia(dia)));
     }
 }

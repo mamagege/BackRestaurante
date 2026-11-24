@@ -1,6 +1,8 @@
 package com.dows.bitacora2.restaurante.controller.docs;
 
+import com.dows.bitacora2.restaurante.model.domain.EstadoPedido;
 import com.dows.bitacora2.restaurante.model.dto.request.PedidoRequestDTO;
+import java.time.LocalDate;
 import com.dows.bitacora2.restaurante.model.dto.response.PedidoResponseDTO;
 import com.dows.bitacora2.restaurante.model.dto.response.ResumenDiaDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,13 +14,15 @@ import java.util.List;
 
 @Tag(name = "Pedidos", description = "Administración de pedidos del restaurante")
 public interface PedidoApi {
-    @Operation(summary = "Listar todos los pedidos")
+    @Operation(summary = "Listar pedidos",
+            description = "Ordenados por hora de llegada. Filtros opcionales: estado (uno o varios, por ejemplo "
+                    + "?estado=RECIBIDO,EN_PREPARACION para el tablero de cocina) e idCuenta.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista de pedidos"),
         @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente.")
     })
-    ResponseEntity<List<PedidoResponseDTO>> listar();
+    ResponseEntity<List<PedidoResponseDTO>> listar(List<EstadoPedido> estados, Long idCuenta);
 
     @Operation(summary = "Obtener pedido por ID")
     @ApiResponses({
@@ -74,11 +78,13 @@ public interface PedidoApi {
     })
     ResponseEntity<Void> eliminar(Long id);
 
-    @Operation(summary = "Resumen de ventas")
+    @Operation(summary = "Resumen de ventas del día",
+            description = "Ventas por plato y por usuario que registró el pedido, sin pedidos cancelados. "
+                    + "Parámetro opcional fecha (AAAA-MM-DD); por defecto, hoy.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Total de pedidos, ingresos y platos más pedidos"),
         @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente.")
     })
-    ResponseEntity<ResumenDiaDTO> resumenDelDia();
+    ResponseEntity<ResumenDiaDTO> resumenDelDia(LocalDate fecha);
 }
