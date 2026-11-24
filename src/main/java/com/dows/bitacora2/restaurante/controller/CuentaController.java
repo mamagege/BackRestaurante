@@ -4,6 +4,7 @@ import com.dows.bitacora2.restaurante.controller.docs.CuentaApi;
 import com.dows.bitacora2.restaurante.mapper.CuentaMapper;
 import com.dows.bitacora2.restaurante.model.domain.Cuenta;
 import com.dows.bitacora2.restaurante.model.dto.request.CuentaRequestDTO;
+import com.dows.bitacora2.restaurante.model.dto.request.PagoRequestDTO;
 import com.dows.bitacora2.restaurante.model.dto.response.CuentaResponseDTO;
 import com.dows.bitacora2.restaurante.service.ICuentaService;
 import jakarta.validation.Valid;
@@ -58,8 +59,8 @@ public class CuentaController implements CuentaApi {
     @Override
     @PatchMapping("/{id}/pago")
     @PreAuthorize("hasAnyRole('MESERO', 'ADMIN')")
-    public ResponseEntity<CuentaResponseDTO> pagar(@PathVariable Long id) {
-        Cuenta pagada = cuentaService.pagar(id);
+    public ResponseEntity<CuentaResponseDTO> pagar(@PathVariable Long id, @Valid @RequestBody PagoRequestDTO dto) {
+        Cuenta pagada = cuentaService.pagar(id, dto.metodoPago(), dto.montoRecibido());
         return ResponseEntity.ok(cuentaMapper.toResponse(pagada));
     }
 }

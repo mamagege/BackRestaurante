@@ -7,6 +7,7 @@ import com.dows.bitacora2.restaurante.mapper.CuentaEntityMapper;
 import com.dows.bitacora2.restaurante.model.domain.Cuenta;
 import com.dows.bitacora2.restaurante.model.domain.EstadoCuenta;
 import com.dows.bitacora2.restaurante.model.domain.EstadoPedido;
+import com.dows.bitacora2.restaurante.model.domain.MetodoPago;
 import com.dows.bitacora2.restaurante.persistence.entity.CuentaEntity;
 import com.dows.bitacora2.restaurante.persistence.entity.PedidoEntity;
 import com.dows.bitacora2.restaurante.repository.CuentaRepository;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -32,6 +34,7 @@ public class CuentaServiceImpl implements ICuentaService {
     private final CuentaEntityMapper entityMapper;
     private final PedidoRepository pedidoRepository;
     private final IMesaService mesaService;
+    private final IPasarelaPago pasarelaPago;
 
     @Override
     @Transactional(readOnly = true)
@@ -87,9 +90,9 @@ public class CuentaServiceImpl implements ICuentaService {
 
     @Override
     @Transactional
-    public Cuenta pagar(Long id) {
+    public Cuenta pagar(Long id, MetodoPago metodo, Double montoRecibido) {
         Cuenta cuenta = obtenerPorId(id);
-        if (cuenta.getEstado() == EstadoCuenta.CERRADA) {
+        if (!cuenta.estaAbierta()) {
             throw new ReglaDeNegocioException("La cuenta ya se encuentra pagada.");
         }
 
@@ -102,11 +105,31 @@ public class CuentaServiceImpl implements ICuentaService {
         }
 
         cuenta.setTotal(calcularTotal(pedidos));
-        cuenta.setEstado(EstadoCuenta.CERRADA);
+        cuenta.validarPago(metodo, montoRecibido);
+
+        String referencia = cobrar(cuenta, metodo);
+        cuenta.registrarPago(metodo, montoRecibido, referencia, LocalDateTime.now());
         mesaService.cerrarCuenta(cuenta.getIdMesa());
         CuentaEntity entity = cuentaRepository.save(entityMapper.toEntity(cuenta));
-        log.info("Cuenta id={} pagada, total={}", id, cuenta.getTotal());
+        log.info("Cuenta id={} pagada con {}: total={}, recibido={}, cambio={}",
+                id, metodo, cuenta.getTotal(), cuenta.getMontoRecibido(), cuenta.getCambio());
         return entityMapper.toDomain(entity);
+    }
+
+    /**
+     * El efectivo se recibe en caja; tarjeta y transferencia pasan por la pasarela externa.
+     * Si la pasarela rechaza, la cuenta sigue abierta y la mesa ocupada (RN-07).
+     */
+    private String cobrar(Cuenta cuenta, MetodoPago metodo) {
+        if (metodo == MetodoPago.EFECTIVO || cuenta.calcularTotal() == 0.0) {
+            return null;
+        }
+        IPasarelaPago.ResultadoPago resultado = pasarelaPago.procesar(cuenta.getId(), metodo, cuenta.calcularTotal());
+        if (!resultado.aprobado()) {
+            log.warn("Pago rechazado para la cuenta id={}: {}", cuenta.getId(), resultado.motivoRechazo());
+            throw new ReglaDeNegocioException("Pago rechazado por la pasarela: " + resultado.motivoRechazo());
+        }
+        return resultado.referencia();
     }
 
     private List<PedidoEntity> pedidosDe(Long idCuenta) {

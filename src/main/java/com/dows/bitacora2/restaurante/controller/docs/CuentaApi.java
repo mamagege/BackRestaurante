@@ -1,6 +1,7 @@
 package com.dows.bitacora2.restaurante.controller.docs;
 
 import com.dows.bitacora2.restaurante.model.dto.request.CuentaRequestDTO;
+import com.dows.bitacora2.restaurante.model.dto.request.PagoRequestDTO;
 import com.dows.bitacora2.restaurante.model.dto.response.CuentaResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -51,15 +52,20 @@ public interface CuentaApi {
     })
     ResponseEntity<CuentaResponseDTO> actualizarTotal(Long id);
 
-    @Operation(summary = "Pagar cuenta")
+    @Operation(summary = "Registrar el pago y cerrar la cuenta",
+            description = "Cierra la cuenta y libera la mesa (RN-07). Con EFECTIVO el monto puede superar el total "
+                    + "y se calcula el cambio; con TARJETA o TRANSFERENCIA debe ser exactamente el total y se "
+                    + "procesa por la pasarela de pago.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Cuenta pagada"),
+        @ApiResponse(responseCode = "400", description = "Falta el método de pago o el monto, o tienen formato inválido"),
 
         @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
 
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Cuenta no existe"),
-        @ApiResponse(responseCode = "422", description = "La cuenta ya estaba pagada o hay pedidos sin entregar")
+        @ApiResponse(responseCode = "422", description = "Cuenta ya pagada, pedidos sin entregar, monto insuficiente "
+                + "o pago rechazado por la pasarela")
     })
-    ResponseEntity<CuentaResponseDTO> pagar(Long id);
+    ResponseEntity<CuentaResponseDTO> pagar(Long id, PagoRequestDTO dto);
 }
