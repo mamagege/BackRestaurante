@@ -421,4 +421,77 @@ class PedidoServiceImplTest {
         assertThrows(TransicionEstadoInvalidaException.class, () -> pedidoService.cambiarEstado(100L, "ENTREGADO"));
         verifyNoInteractions(eventos);
     }
+
+    private static PedidoEntity pedidoDelDia(EstadoPedido estado, String usuario, String plato, double precio, int cantidad) {
+        com.dows.bitacora2.restaurante.persistence.entity.ItemPedidoEntity item =
+                new com.dows.bitacora2.restaurante.persistence.entity.ItemPedidoEntity();
+        item.setNombrePlato(plato);
+        item.setPrecioCongelado(precio);
+        item.setCantidad(cantidad);
+        PedidoEntity p = new PedidoEntity();
+        p.setEstado(estado);
+        p.setCreadoPor(usuario);
+        p.getItems().add(item);
+        return p;
+    }
+
+    @Test
+    void resumenDelDia_AgrupaPorPlatoYUsuarioSinCancelados() {
+        java.time.LocalDate hoy = java.time.LocalDate.of(2026, 11, 24);
+        when(pedidoRepository.findByTimestampGreaterThanEqualAndTimestampLessThan(
+                hoy.atStartOfDay(), hoy.plusDays(1).atStartOfDay())).thenReturn(List.of(
+                pedidoDelDia(EstadoPedido.ENTREGADO, "mesero@r.com", "Margarita", 30000, 2),
+                pedidoDelDia(EstadoPedido.LISTO, "cliente@r.com", "Margarita", 30000, 1),
+                pedidoDelDia(EstadoPedido.ENTREGADO, "mesero@r.com", "Limonada", 8000, 2),
+                pedidoDelDia(EstadoPedido.CANCELADO, "mesero@r.com", "Carbonara", 99999, 5)));
+
+        var r = pedidoService.resumenDelDia(hoy);
+
+        assertEquals(3, r.totalPedidos());
+        assertEquals(106000.0, r.ingresoTotal());
+        assertEquals("Margarita", r.porPlato().get(0).plato());
+        assertEquals(3, r.porPlato().get(0).cantidad(), "suma cantidades, no líneas");
+        assertEquals(90000.0, r.porPlato().get(0).ingresos());
+        assertTrue(r.porPlato().stream().noneMatch(v -> v.plato().equals("Carbonara")), "excluye cancelados");
+        assertEquals("mesero@r.com", r.porUsuario().get(0).usuario());
+        assertEquals(2, r.porUsuario().get(0).pedidos());
+        assertEquals(76000.0, r.porUsuario().get(0).ingresos());
+    }
+
+    @Test
+    void buscar_PorEstados_UsaLaConsultaOrdenadaPorLlegada() {
+        var estados = List.of(EstadoPedido.RECIBIDO, EstadoPedido.EN_PREPARACION);
+        when(pedidoRepository.findByEstadoInOrderByTimestampAsc(estados)).thenReturn(List.of());
+
+        pedidoService.buscar(estados, null);
+
+        verify(pedidoRepository).findByEstadoInOrderByTimestampAsc(estados);
+    }
+
+    @Test
+    void buscar_PorCuentaYEstado_FiltraLosEstados() {
+        PedidoEntity listo = new PedidoEntity();
+        listo.setEstado(EstadoPedido.LISTO);
+        PedidoEntity entregado = new PedidoEntity();
+        entregado.setEstado(EstadoPedido.ENTREGADO);
+        when(pedidoRepository.findByIdCuentaOrderByTimestampAsc(5L)).thenReturn(List.of(listo, entregado));
+
+        pedidoService.buscar(List.of(EstadoPedido.LISTO), 5L);
+
+        verify(entityMapper).toDomainList(List.of(listo));
+    }
+
+    @Test
+    void crear_RegistraQuienCreoElPedido() {
+        when(mesaService.obtenerPorId(1L)).thenReturn(new Mesa());
+        when(platoService.obtenerPorId(1L)).thenReturn(pizzaPlato);
+        when(usuarioActual.obtener()).thenReturn("mesero@restaurante.com");
+        PedidoEntity entityMock = new PedidoEntity();
+        when(entityMapper.toEntity(any(Pedido.class))).thenReturn(entityMock);
+        when(pedidoRepository.save(entityMock)).thenReturn(entityMock);
+
+        pedidoService.crear(pedidoBase);
+
+        assertEquals("mesero@restaurante.com", pedidoBase.getCreadoPor());
+    }
 }

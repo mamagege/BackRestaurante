@@ -1,11 +1,14 @@
 package com.dows.bitacora2.restaurante.service;
 
 import com.dows.bitacora2.restaurante.model.domain.Cuenta;
+import com.dows.bitacora2.restaurante.model.domain.EstadoCuenta;
 import com.dows.bitacora2.restaurante.model.domain.MetodoPago;
 import java.util.List;
 
 public interface ICuentaService {
     List<Cuenta> obtenerTodas();
+    /** Cuentas filtradas por mesa y/o estado (ambos opcionales), las más recientes primero. */
+    List<Cuenta> buscar(Long idMesa, EstadoCuenta estado);
     Cuenta obtenerPorId(Long id);
     Cuenta crear(Cuenta cuenta);
     Cuenta actualizarTotal(Long id);

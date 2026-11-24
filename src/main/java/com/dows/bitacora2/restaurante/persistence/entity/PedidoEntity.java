@@ -27,6 +27,10 @@ public class PedidoEntity {
     @Column(name = "id_cuenta")
     private Long idCuenta;
 
+    /** Email de quien registró el pedido (mesero o cliente), para el reporte de ventas. */
+    @Column(length = 120)
+    private String creadoPor;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoPedido estado;
@@ -44,6 +48,8 @@ public class PedidoEntity {
     public void setVersion(Long version) { this.version = version; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+    public String getCreadoPor() { return creadoPor; }
+    public void setCreadoPor(String creadoPor) { this.creadoPor = creadoPor; }
     public Long getIdCuenta() { return idCuenta; }
     public void setIdCuenta(Long idCuenta) { this.idCuenta = idCuenta; }
     public Long getIdMesa() { return idMesa; }

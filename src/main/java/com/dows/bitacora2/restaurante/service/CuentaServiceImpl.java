@@ -44,6 +44,22 @@ public class CuentaServiceImpl implements ICuentaService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<Cuenta> buscar(Long idMesa, EstadoCuenta estado) {
+        List<CuentaEntity> cuentas;
+        if (idMesa != null && estado != null) {
+            cuentas = cuentaRepository.findByIdMesaAndEstadoOrderByFechaAperturaDesc(idMesa, estado);
+        } else if (idMesa != null) {
+            cuentas = cuentaRepository.findByIdMesaOrderByFechaAperturaDesc(idMesa);
+        } else if (estado != null) {
+            cuentas = cuentaRepository.findByEstadoOrderByFechaAperturaDesc(estado);
+        } else {
+            cuentas = cuentaRepository.findAll();
+        }
+        return entityMapper.toDomainList(cuentas);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Cuenta obtenerPorId(Long id) {
         return cuentaRepository.findById(id)
                 .map(entityMapper::toDomain)
