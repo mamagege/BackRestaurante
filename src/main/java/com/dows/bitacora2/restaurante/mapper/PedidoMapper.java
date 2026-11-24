@@ -28,6 +28,7 @@ public interface PedidoMapper {
 
     List<PedidoResponseDTO> toResponseList(List<Pedido> pedidos);
 
+    @Mapping(target = "precioUnitario", source = "precioCongelado")
     @Mapping(target = "subtotal", expression = "java(item.subtotal())")
     ItemPedidoResponseDTO toResponse(ItemPedido item);
 
