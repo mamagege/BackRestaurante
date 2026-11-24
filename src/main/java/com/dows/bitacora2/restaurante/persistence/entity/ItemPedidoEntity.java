@@ -1,6 +1,7 @@
 package com.dows.bitacora2.restaurante.persistence.entity;
 
 import jakarta.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -28,9 +29,22 @@ public class ItemPedidoEntity {
     private String salsa;
 
     @ElementCollection
+    @CollectionTable(name = "item_pedido_salsas_adicionales", joinColumns = @JoinColumn(name = "item_pedido_id"))
+    @Column(name = "salsa", length = 50)
+    private List<String> salsasAdicionales = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "item_pedido_proteinas", joinColumns = @JoinColumn(name = "item_pedido_id"))
+    @Column(name = "proteina", length = 50)
+    private List<String> proteinas = new ArrayList<>();
+
+    @ElementCollection
     @CollectionTable(name = "item_pedido_toppings", joinColumns = @JoinColumn(name = "item_pedido_id"))
     @Column(name = "topping")
-    private List<String> toppings;
+    private List<String> toppings = new ArrayList<>();
+
+    @Column(length = 200)
+    private String notas;
 
     public ItemPedidoEntity() {}
 
@@ -48,6 +62,12 @@ public class ItemPedidoEntity {
     public void setMasa(String masa) { this.masa = masa; }
     public String getSalsa() { return salsa; }
     public void setSalsa(String salsa) { this.salsa = salsa; }
+    public List<String> getSalsasAdicionales() { return salsasAdicionales; }
+    public void setSalsasAdicionales(List<String> salsasAdicionales) { this.salsasAdicionales = salsasAdicionales; }
+    public List<String> getProteinas() { return proteinas; }
+    public void setProteinas(List<String> proteinas) { this.proteinas = proteinas; }
+    public String getNotas() { return notas; }
+    public void setNotas(String notas) { this.notas = notas; }
     public List<String> getToppings() { return toppings; }
     public void setToppings(List<String> toppings) { this.toppings = toppings; }
 }

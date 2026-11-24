@@ -3,7 +3,6 @@ package com.dows.bitacora2.restaurante.service;
 import com.dows.bitacora2.restaurante.exception.EstadoInvalidoException;
 import com.dows.bitacora2.restaurante.exception.RecursoNoEncontradoException;
 import com.dows.bitacora2.restaurante.exception.ReglaDeNegocioException;
-import com.dows.bitacora2.restaurante.exception.ToppingsExcedidosException;
 import com.dows.bitacora2.restaurante.exception.TransicionEstadoInvalidaException;
 import com.dows.bitacora2.restaurante.mapper.PedidoEntityMapper;
 import com.dows.bitacora2.restaurante.model.domain.EstadoPedido;
@@ -109,7 +108,7 @@ public class PedidoServiceImpl implements IPedidoService {
 
             return entityMapper.toDomain(entity);
         } catch (IllegalArgumentException e) {
-            throw new EstadoInvalidoException("Estado de pedido invÃƒÂ¡lido: " + estadoStr);
+            throw new EstadoInvalidoException("Estado de pedido inválido: " + estadoStr);
         }
     }
 
@@ -118,7 +117,7 @@ public class PedidoServiceImpl implements IPedidoService {
     public void eliminar(Long id) {
         Pedido pedido = obtenerPorId(id);
         if (!pedido.puedeModificarse()) {
-            throw new ReglaDeNegocioException("El pedido no se puede eliminar porque ya estÃƒÂ¡ en preparaciÃƒÂ³n o listo.");
+            throw new ReglaDeNegocioException("El pedido no se puede cancelar porque ya está en preparación o listo.");
         }
         String estadoAnterior = pedido.getEstado().name();
         pedido.setEstado(EstadoPedido.CANCELADO);
@@ -132,32 +131,11 @@ public class PedidoServiceImpl implements IPedidoService {
         });
     }
 
+    /** Asocia cada ítem a su plato: disponibilidad, personalización (RN-01/RN-02/pasta) y precio congelado (RN-03). */
     private void validarYCompletarItems(List<ItemPedido> items) {
         for (ItemPedido item : items) {
             Plato plato = platoService.obtenerPorId(item.getIdPlato());
-            
-            if (!plato.estaDisponible()) {
-                throw new ReglaDeNegocioException("El plato " + plato.getNombre() + " no estÃƒÂ¡ disponible.");
-            }
-
-            item.setNombrePlato(plato.getNombre());
-            item.setPrecioCongelado(plato.getPrecio());
-
-            boolean esPizza = "Pizza".equalsIgnoreCase(plato.getCategoria());
-            boolean esPasta = "Pasta".equalsIgnoreCase(plato.getCategoria());
-
-            if (esPizza || esPasta) {
-                if (item.getMasa() == null || item.getMasa().trim().isEmpty() ||
-                    item.getSalsa() == null || item.getSalsa().trim().isEmpty()) {
-                    throw new ReglaDeNegocioException("RN-01: Todo plato personalizable debe tener masa base y salsa primaria.");
-                }
-            }
-
-            if (esPizza) {
-                if (item.getToppings() != null && item.getToppings().size() > 5) {
-                    throw new ToppingsExcedidosException("RN-02: Una pizza no puede llevar mÃƒÂ¡s de 5 toppings.");
-                }
-            }
+            item.aplicarPlato(plato);
         }
     }
 

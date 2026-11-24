@@ -13,6 +13,10 @@ public class Plato {
         return Boolean.TRUE.equals(disponible);
     }
 
+    public TipoPersonalizacion tipoPersonalizacion() {
+        return TipoPersonalizacion.deCategoria(categoria);
+    }
+
     public void activar()   { this.disponible = true;  }
     public void desactivar(){ this.disponible = false; }
 
