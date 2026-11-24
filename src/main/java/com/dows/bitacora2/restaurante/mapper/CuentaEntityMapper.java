@@ -11,6 +11,7 @@ import java.util.List;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface CuentaEntityMapper {
+    @org.mapstruct.Mapping(target = "version", ignore = true)
     CuentaEntity toEntity(Cuenta cuenta);
     Cuenta toDomain(CuentaEntity entity);
     List<Cuenta> toDomainList(List<CuentaEntity> entities);
@@ -19,5 +20,6 @@ public interface CuentaEntityMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "idMesa", ignore = true)
     @Mapping(target = "fechaApertura", ignore = true)
+    @Mapping(target = "version", ignore = true)
     void actualizarEntity(Cuenta cuenta, @MappingTarget CuentaEntity entity);
 }

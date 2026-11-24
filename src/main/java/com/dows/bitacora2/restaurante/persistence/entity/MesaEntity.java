@@ -11,6 +11,11 @@ public class MesaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Bloqueo optimista: una escritura con una versión obsoleta falla en lugar de pisar otra. */
+    @Version
+    @Column(nullable = false, columnDefinition = "bigint default 0")
+    private Long version;
+
     @Column(nullable = false, unique = true)
     private Integer numero;
 
@@ -26,6 +31,8 @@ public class MesaEntity {
 
     public MesaEntity() {}
 
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Integer getNumero() { return numero; }

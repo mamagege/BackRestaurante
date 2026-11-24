@@ -11,6 +11,7 @@ import java.util.List;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface PedidoEntityMapper {
+    @org.mapstruct.Mapping(target = "version", ignore = true)
     PedidoEntity toEntity(Pedido pedido);
     Pedido toDomain(PedidoEntity entity);
     List<Pedido> toDomainList(List<PedidoEntity> entities);
