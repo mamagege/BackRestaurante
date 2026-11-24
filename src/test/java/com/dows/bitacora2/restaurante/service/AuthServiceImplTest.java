@@ -28,6 +28,8 @@ class AuthServiceImplTest {
     @Mock private AuthenticationManager authManager;
     @Mock private JwtUtil jwtUtil;
     @Mock private LoginAttemptService intentos;
+    @Mock private com.dows.bitacora2.restaurante.repository.UsuarioRepository usuarioRepository;
+    @Mock private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @InjectMocks private AuthServiceImpl authService;
 
     @Test
@@ -61,5 +63,33 @@ class AuthServiceImplTest {
                 () -> authService.autenticarYGenerarToken(LOGIN));
         assertTrue(ex.getMessage().contains("15 minutos"));
         verifyNoInteractions(authManager);
+    }
+
+    @Test
+    @DisplayName("registro: crea un CLIENTE con email normalizado y password cifrado, y devuelve su token")
+    void registrar_creaClienteYDevuelveToken() {
+        when(usuarioRepository.findByEmail("nuevo@correo.com")).thenReturn(java.util.Optional.empty());
+        when(passwordEncoder.encode("secreto123")).thenReturn("hash");
+        when(jwtUtil.generateToken("nuevo@correo.com", "ROLE_CLIENTE")).thenReturn("jwt");
+
+        assertEquals("jwt", authService.registrarCliente("  Nuevo@Correo.com ", "secreto123"));
+
+        org.mockito.ArgumentCaptor<com.dows.bitacora2.restaurante.persistence.entity.UsuarioEntity> captor =
+                org.mockito.ArgumentCaptor.forClass(com.dows.bitacora2.restaurante.persistence.entity.UsuarioEntity.class);
+        verify(usuarioRepository).save(captor.capture());
+        assertEquals("nuevo@correo.com", captor.getValue().getEmail());
+        assertEquals("hash", captor.getValue().getPassword());
+        assertEquals("CLIENTE", captor.getValue().getRol());
+    }
+
+    @Test
+    @DisplayName("registro: un email ya registrado responde conflicto")
+    void registrar_emailDuplicado_lanzaConflicto() {
+        when(usuarioRepository.findByEmail("mesero@restaurante.com"))
+                .thenReturn(java.util.Optional.of(new com.dows.bitacora2.restaurante.persistence.entity.UsuarioEntity()));
+
+        assertThrows(com.dows.bitacora2.restaurante.exception.ConflictoException.class,
+                () -> authService.registrarCliente("MESERO@restaurante.com", "secreto123"));
+        verify(usuarioRepository, never()).save(any());
     }
 }
