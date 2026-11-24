@@ -72,6 +72,7 @@ public class PedidoController implements PedidoApi {
         return ResponseEntity.noContent().build();
     }
 
+    @Override
     @GetMapping("/resumen")
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MESERO')")
     public ResponseEntity<com.dows.bitacora2.restaurante.model.dto.response.ResumenDiaDTO> resumenDelDia() {

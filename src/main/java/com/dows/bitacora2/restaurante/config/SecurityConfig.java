@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.dows.bitacora2.restaurante.repository.UsuarioRepository;
 import com.dows.bitacora2.restaurante.persistence.entity.UsuarioEntity;
 import com.dows.bitacora2.restaurante.security.JwtAuthFilter;
+import com.dows.bitacora2.restaurante.security.ProblemDetailSecurityHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -31,6 +32,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, UsuarioRepository usuarioRepository,
             JwtAuthFilter jwtAuthFilter, com.dows.bitacora2.restaurante.security.JwtUtil jwtUtil,
+            ProblemDetailSecurityHandler problemDetailSecurityHandler,
             org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource) throws Exception {
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
@@ -87,18 +89,8 @@ public class SecurityConfig {
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oAuth2SuccessHandler(usuarioRepository, jwtUtil)))
                 .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.setContentType("application/json");
-                            response.setStatus(401);
-                            response.getWriter().write(
-                                    "{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"Debes iniciar sesion o proveer un token valido\"}");
-                        })
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setContentType("application/json");
-                            response.setStatus(403);
-                            response.getWriter().write(
-                                    "{\"status\": 403, \"error\": \"Forbidden\", \"message\": \"No tienes permisos para realizar esta accion\"}");
-                        }))
+                        .authenticationEntryPoint(problemDetailSecurityHandler)
+                        .accessDeniedHandler(problemDetailSecurityHandler))
                 // No se usa STATELESS porque rompería OAuth2
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

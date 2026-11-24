@@ -14,6 +14,7 @@ public interface MesaApi {
     @Operation(summary = "Listar todas las mesas")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista de mesas"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente.")
     })
     ResponseEntity<List<MesaResponseDTO>> listar();
@@ -21,6 +22,7 @@ public interface MesaApi {
     @Operation(summary = "Obtener mesa por ID")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Mesa encontrada"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Mesa no existe")
     })
@@ -30,6 +32,7 @@ public interface MesaApi {
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Mesa creada"),
         @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "409", description = "Número de mesa duplicado")
     })
@@ -39,6 +42,7 @@ public interface MesaApi {
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Mesa actualizada"),
         @ApiResponse(responseCode = "400", description = "Datos inválidos"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Mesa no existe"),
         @ApiResponse(responseCode = "409", description = "Número duplicado")
@@ -48,24 +52,28 @@ public interface MesaApi {
     @Operation(summary = "Cambiar estado de una mesa")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Estado actualizado"),
-        @ApiResponse(responseCode = "400", description = "Estado inválido"),
+        @ApiResponse(responseCode = "400", description = "Falta el parámetro estado"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
-        @ApiResponse(responseCode = "404", description = "Mesa no existe")
+        @ApiResponse(responseCode = "404", description = "Mesa no existe"),
+        @ApiResponse(responseCode = "422", description = "Estado de mesa inexistente")
     })
     ResponseEntity<MesaResponseDTO> cambiarEstado(Long id, String estado);
 
     @Operation(summary = "Abrir cuenta de una mesa")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Cuenta abierta"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Mesa no existe"),
-        @ApiResponse(responseCode = "409", description = "Mesa ya tiene cuenta abierta")
+        @ApiResponse(responseCode = "409", description = "La mesa ya tiene una cuenta abierta (RN-06)")
     })
     ResponseEntity<MesaResponseDTO> abrirCuenta(Long id);
 
     @Operation(summary = "Cerrar cuenta de una mesa")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Cuenta cerrada"),
+        @ApiResponse(responseCode = "401", description = "No autenticado o token inválido"),
         @ApiResponse(responseCode = "403", description = "Acceso denegado. Motivo: Rol insuficiente."),
         @ApiResponse(responseCode = "404", description = "Mesa no existe"),
         @ApiResponse(responseCode = "409", description = "Mesa no tiene cuenta abierta")

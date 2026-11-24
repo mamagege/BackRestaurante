@@ -49,8 +49,9 @@ class AuthControllerTest {
 
         mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(LOGIN))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Credenciales inválidas"))
-                .andExpect(jsonPath("$.path").value("/api/v1/auth/login"));
+                .andExpect(jsonPath("$.detail").value("Credenciales inválidas"))
+                .andExpect(jsonPath("$.codigo").value("CREDENCIALES_INVALIDAS"))
+                .andExpect(jsonPath("$.instance").value("/api/v1/auth/login"));
     }
 
     @Test
@@ -60,7 +61,7 @@ class AuthControllerTest {
 
         mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(LOGIN))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Credenciales inválidas"));
+                .andExpect(jsonPath("$.detail").value("Credenciales inválidas"));
     }
 
     @Test
@@ -69,6 +70,7 @@ class AuthControllerTest {
         when(authService.autenticarYGenerarToken(any())).thenThrow(new BloqueoTemporalException("bloqueado"));
 
         mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON).content(LOGIN))
-                .andExpect(status().isTooManyRequests());
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.codigo").value("DEMASIADOS_INTENTOS"));
     }
 }
