@@ -16,8 +16,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers(disabledWithoutDocker = true)
 @TestPropertySource(properties = {
         "jwt.secret=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-        "spring.security.oauth2.client.registration.google.client-id=test",
-        "spring.security.oauth2.client.registration.google.client-secret=test",
         "spring.jpa.show-sql=false",
         "spring.jpa.hibernate.ddl-auto=create-drop"
 })

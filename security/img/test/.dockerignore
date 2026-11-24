@@ -1,7 +1,0 @@
-.git
-.github
-target/
-docs/
-*.md
-.env
-*.p12

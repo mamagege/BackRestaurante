@@ -1,0 +1,14 @@
+# Login con Google. Se activa agregando el perfil "oauth" (SPRING_PROFILES_ACTIVE=docker,oauth)
+# y definiendo GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET. Sin este perfil la API funciona solo con JWT.
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
