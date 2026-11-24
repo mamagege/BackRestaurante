@@ -78,20 +78,22 @@ public class CuentaServiceImpl implements ICuentaService {
     @Override
     @Transactional
     public Cuenta actualizarTotal(Long id) {
-        Cuenta cuenta = obtenerPorId(id);
+        CuentaEntity entity = buscarEntity(id);
+        Cuenta cuenta = entityMapper.toDomain(entity);
         if (cuenta.getEstado() == EstadoCuenta.CERRADA) {
             throw new ReglaDeNegocioException("La cuenta ya está pagada y no se puede actualizar.");
         }
         cuenta.setTotal(calcularTotal(pedidosDe(id)));
-        CuentaEntity entity = cuentaRepository.save(entityMapper.toEntity(cuenta));
+        entityMapper.actualizarEntity(cuenta, entity);
         log.info("Total de la cuenta id={} actualizado a {}", id, cuenta.getTotal());
-        return entityMapper.toDomain(entity);
+        return entityMapper.toDomain(cuentaRepository.save(entity));
     }
 
     @Override
     @Transactional
     public Cuenta pagar(Long id, MetodoPago metodo, Double montoRecibido) {
-        Cuenta cuenta = obtenerPorId(id);
+        CuentaEntity entity = buscarEntity(id);
+        Cuenta cuenta = entityMapper.toDomain(entity);
         if (!cuenta.estaAbierta()) {
             throw new ReglaDeNegocioException("La cuenta ya se encuentra pagada.");
         }
@@ -110,10 +112,10 @@ public class CuentaServiceImpl implements ICuentaService {
         String referencia = cobrar(cuenta, metodo);
         cuenta.registrarPago(metodo, montoRecibido, referencia, LocalDateTime.now());
         mesaService.cerrarCuenta(cuenta.getIdMesa());
-        CuentaEntity entity = cuentaRepository.save(entityMapper.toEntity(cuenta));
+        entityMapper.actualizarEntity(cuenta, entity);
         log.info("Cuenta id={} pagada con {}: total={}, recibido={}, cambio={}",
                 id, metodo, cuenta.getTotal(), cuenta.getMontoRecibido(), cuenta.getCambio());
-        return entityMapper.toDomain(entity);
+        return entityMapper.toDomain(cuentaRepository.save(entity));
     }
 
     /**
@@ -130,6 +132,11 @@ public class CuentaServiceImpl implements ICuentaService {
             throw new ReglaDeNegocioException("Pago rechazado por la pasarela: " + resultado.motivoRechazo());
         }
         return resultado.referencia();
+    }
+
+    private CuentaEntity buscarEntity(Long id) {
+        return cuentaRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Cuenta", id));
     }
 
     private List<PedidoEntity> pedidosDe(Long idCuenta) {

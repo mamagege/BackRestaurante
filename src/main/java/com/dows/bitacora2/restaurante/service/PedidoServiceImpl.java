@@ -74,65 +74,74 @@ public class PedidoServiceImpl implements IPedidoService {
     @Override
     @Transactional
     public Pedido actualizar(Long id, Pedido nuevosDatos) {
-        Pedido existente = obtenerPorId(id);
-        
-        if (!existente.puedeModificarse()) {
+        PedidoEntity entity = buscarEntity(id);
+        if (entity.getEstado() != EstadoPedido.RECIBIDO) {
             throw new ReglaDeNegocioException("RN-04: El pedido solo puede modificarse en estado RECIBIDO.");
         }
 
         validarYCompletarItems(nuevosDatos.getItems());
-        existente.setItems(nuevosDatos.getItems());
-        
-        PedidoEntity entity = pedidoRepository.save(entityMapper.toEntity(existente));
+        // Se reemplazan los ítems sobre la entidad gestionada: orphanRemoval borra los anteriores
+        entity.getItems().clear();
+        nuevosDatos.getItems().forEach(item -> entity.getItems().add(entityMapper.toItemEntity(item)));
+
+        PedidoEntity guardado = pedidoRepository.save(entity);
         log.info("Pedido actualizado: id={}", id);
-        return entityMapper.toDomain(entity);
+        return entityMapper.toDomain(guardado);
     }
 
     @Override
     @Transactional
     public Pedido cambiarEstado(Long id, String estadoStr) {
-        Pedido pedido = obtenerPorId(id);
-        try {
-            EstadoPedido nuevoEstado = EstadoPedido.valueOf(estadoStr.toUpperCase());
-            
-            if (!pedido.getEstado().puedeTransicionarA(nuevoEstado)) {
-                throw new TransicionEstadoInvalidaException("No se puede pasar de " + pedido.getEstado() + " a " + nuevoEstado);
-            }
-            
-            String estadoAnterior = pedido.getEstado().name();
-            pedido.setEstado(nuevoEstado);
-            PedidoEntity entity = pedidoRepository.save(entityMapper.toEntity(pedido));
-            log.info("Estado de pedido id={} cambiado a {}", id, nuevoEstado);
-
-            java.util.concurrent.CompletableFuture.runAsync(() -> {
-                eventoMongoRepo.save(new com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument(
-                    id, estadoAnterior, nuevoEstado.name(), java.time.LocalDateTime.now(), "Cambio de estado"
-                ));
-            });
-
-            return entityMapper.toDomain(entity);
-        } catch (IllegalArgumentException e) {
-            throw new EstadoInvalidoException("Estado de pedido inválido: " + estadoStr);
+        EstadoPedido nuevoEstado = parsearEstado(estadoStr);
+        PedidoEntity entity = buscarEntity(id);
+        EstadoPedido estadoAnterior = entity.getEstado();
+        if (!estadoAnterior.puedeTransicionarA(nuevoEstado)) {
+            throw new TransicionEstadoInvalidaException("No se puede pasar de " + estadoAnterior + " a " + nuevoEstado);
         }
+
+        entity.setEstado(nuevoEstado);
+        PedidoEntity guardado = pedidoRepository.save(entity);
+        log.info("Estado de pedido id={} cambiado de {} a {}", id, estadoAnterior, nuevoEstado);
+
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            eventoMongoRepo.save(new com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument(
+                id, estadoAnterior.name(), nuevoEstado.name(), java.time.LocalDateTime.now(), "Cambio de estado"
+            ));
+        });
+
+        return entityMapper.toDomain(guardado);
     }
 
     @Override
     @Transactional
     public void eliminar(Long id) {
-        Pedido pedido = obtenerPorId(id);
-        if (!pedido.puedeModificarse()) {
+        PedidoEntity entity = buscarEntity(id);
+        EstadoPedido estadoAnterior = entity.getEstado();
+        if (!estadoAnterior.esCancelable()) {
             throw new ReglaDeNegocioException("El pedido no se puede cancelar porque ya está en preparación o listo.");
         }
-        String estadoAnterior = pedido.getEstado().name();
-        pedido.setEstado(EstadoPedido.CANCELADO);
-        pedidoRepository.save(entityMapper.toEntity(pedido));
+        entity.setEstado(EstadoPedido.CANCELADO);
+        pedidoRepository.save(entity);
         log.info("Pedido cancelado: id={}", id);
 
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             eventoMongoRepo.save(new com.dows.bitacora2.restaurante.persistence.document.EventoPedidoDocument(
-                id, estadoAnterior, "CANCELADO", java.time.LocalDateTime.now(), "Pedido cancelado"
+                id, estadoAnterior.name(), "CANCELADO", java.time.LocalDateTime.now(), "Pedido cancelado"
             ));
         });
+    }
+
+    private PedidoEntity buscarEntity(Long id) {
+        return pedidoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Pedido", id));
+    }
+
+    private static EstadoPedido parsearEstado(String estadoStr) {
+        try {
+            return EstadoPedido.valueOf(estadoStr.strip().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new EstadoInvalidoException("Estado de pedido inválido: " + estadoStr);
+        }
     }
 
     /** Asocia cada ítem a su plato: disponibilidad, personalización (RN-01/RN-02/pasta) y precio congelado (RN-03). */

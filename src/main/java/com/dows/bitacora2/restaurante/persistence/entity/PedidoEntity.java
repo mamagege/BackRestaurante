@@ -3,6 +3,7 @@ package com.dows.bitacora2.restaurante.persistence.entity;
 import com.dows.bitacora2.restaurante.model.domain.EstadoPedido;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -30,7 +31,7 @@ public class PedidoEntity {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "pedido_id")
-    private List<ItemPedidoEntity> items;
+    private List<ItemPedidoEntity> items = new ArrayList<>();
 
     public PedidoEntity() {}
 

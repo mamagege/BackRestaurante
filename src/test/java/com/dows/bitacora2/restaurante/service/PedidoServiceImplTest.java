@@ -274,11 +274,9 @@ class PedidoServiceImplTest {
     @Test
     void actualizar_PedidoEnPreparacion_DebeLanzarReglaDeNegocioException() {
         // Arrange
-        pedidoBase.setEstado(EstadoPedido.EN_PREPARACION);
-        
         PedidoEntity entityMock = new PedidoEntity();
+        entityMock.setEstado(EstadoPedido.EN_PREPARACION);
         when(pedidoRepository.findById(100L)).thenReturn(Optional.of(entityMock));
-        when(entityMapper.toDomain(entityMock)).thenReturn(pedidoBase);
 
         // Act & Assert (RN-04)
         ReglaDeNegocioException exception = assertThrows(ReglaDeNegocioException.class, () -> {
@@ -290,29 +288,28 @@ class PedidoServiceImplTest {
     @Test
     void cambiarEstado_DeRecibidoAEnPreparacion_DebeActualizarEstadoExitosamente() {
         // Arrange
-        pedidoBase.setEstado(EstadoPedido.RECIBIDO);
         PedidoEntity entityMock = new PedidoEntity();
+        entityMock.setEstado(EstadoPedido.RECIBIDO);
         when(pedidoRepository.findById(100L)).thenReturn(Optional.of(entityMock));
-        when(entityMapper.toDomain(entityMock)).thenReturn(pedidoBase);
-        when(entityMapper.toEntity(pedidoBase)).thenReturn(entityMock);
         when(pedidoRepository.save(entityMock)).thenReturn(entityMock);
+        when(entityMapper.toDomain(entityMock)).thenReturn(pedidoBase);
 
         // Act
         Pedido resultado = pedidoService.cambiarEstado(100L, "EN_PREPARACION");
 
         // Assert
         assertNotNull(resultado);
-        assertEquals(EstadoPedido.EN_PREPARACION, pedidoBase.getEstado());
-        verify(pedidoRepository, times(1)).save(any());
+        assertEquals(EstadoPedido.EN_PREPARACION, entityMock.getEstado());
+        verify(pedidoRepository, times(1)).save(entityMock); // la misma entidad gestionada, sin re-mapear
+        verify(entityMapper, never()).toEntity(any());
     }
 
     @Test
     void cambiarEstado_DeRecibidoAListo_DebeLanzarTransicionEstadoInvalidaException() {
         // Arrange
-        pedidoBase.setEstado(EstadoPedido.RECIBIDO);
         PedidoEntity entityMock = new PedidoEntity();
+        entityMock.setEstado(EstadoPedido.RECIBIDO);
         when(pedidoRepository.findById(100L)).thenReturn(Optional.of(entityMock));
-        when(entityMapper.toDomain(entityMock)).thenReturn(pedidoBase);
 
         // Act & Assert
         assertThrows(TransicionEstadoInvalidaException.class, () -> {
@@ -343,5 +340,53 @@ class PedidoServiceImplTest {
         assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crear(pedidoBase));
         verify(pedidoRepository, never()).save(any());
         verifyNoInteractions(platoService);
+    }
+
+    @Test
+    void actualizar_ReemplazaLosItemsSobreLaEntidadGestionada() {
+        PedidoEntity entity = new PedidoEntity();
+        entity.setEstado(EstadoPedido.RECIBIDO);
+        entity.getItems().add(new com.dows.bitacora2.restaurante.persistence.entity.ItemPedidoEntity());
+        com.dows.bitacora2.restaurante.persistence.entity.ItemPedidoEntity nuevoItem =
+                new com.dows.bitacora2.restaurante.persistence.entity.ItemPedidoEntity();
+        when(pedidoRepository.findById(100L)).thenReturn(Optional.of(entity));
+        when(platoService.obtenerPorId(1L)).thenReturn(pizzaPlato);
+        when(entityMapper.toItemEntity(any())).thenReturn(nuevoItem);
+        when(pedidoRepository.save(entity)).thenReturn(entity);
+        when(entityMapper.toDomain(entity)).thenReturn(pedidoBase);
+
+        pedidoService.actualizar(100L, pedidoBase);
+
+        assertEquals(List.of(nuevoItem), entity.getItems());
+        verify(entityMapper, never()).toEntity(any());
+    }
+
+    @Test
+    void eliminar_PedidoRecibido_MarcaCanceladoSobreLaEntidad() {
+        PedidoEntity entity = new PedidoEntity();
+        entity.setEstado(EstadoPedido.RECIBIDO);
+        when(pedidoRepository.findById(100L)).thenReturn(Optional.of(entity));
+
+        pedidoService.eliminar(100L);
+
+        assertEquals(EstadoPedido.CANCELADO, entity.getEstado());
+        verify(pedidoRepository).save(entity);
+    }
+
+    @Test
+    void eliminar_PedidoEnPreparacion_DebeLanzarReglaDeNegocio() {
+        PedidoEntity entity = new PedidoEntity();
+        entity.setEstado(EstadoPedido.EN_PREPARACION);
+        when(pedidoRepository.findById(100L)).thenReturn(Optional.of(entity));
+
+        assertThrows(ReglaDeNegocioException.class, () -> pedidoService.eliminar(100L));
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void cambiarEstado_EstadoInexistente_DebeLanzarEstadoInvalidoSinConsultar() {
+        assertThrows(com.dows.bitacora2.restaurante.exception.EstadoInvalidoException.class,
+                () -> pedidoService.cambiarEstado(100L, "VOLANDO"));
+        verifyNoInteractions(pedidoRepository);
     }
 }
