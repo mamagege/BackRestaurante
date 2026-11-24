@@ -46,6 +46,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/platos/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/menu", "/api/v1/menu/**").permitAll()
 
                         // ── Platos (administración de la carta) ────────────────
                         .requestMatchers(HttpMethod.POST, "/api/v1/platos").hasRole("ADMIN")
