@@ -5,6 +5,7 @@ import com.dows.bitacora2.restaurante.exception.RecursoNoEncontradoException;
 import com.dows.bitacora2.restaurante.exception.ReglaDeNegocioException;
 import com.dows.bitacora2.restaurante.exception.TransicionEstadoInvalidaException;
 import com.dows.bitacora2.restaurante.mapper.PedidoEntityMapper;
+import com.dows.bitacora2.restaurante.model.domain.Cuenta;
 import com.dows.bitacora2.restaurante.model.domain.EstadoPedido;
 import com.dows.bitacora2.restaurante.model.domain.ItemPedido;
 import com.dows.bitacora2.restaurante.model.domain.Pedido;
@@ -28,6 +29,7 @@ public class PedidoServiceImpl implements IPedidoService {
     private final PedidoEntityMapper entityMapper;
     private final IPlatoService platoService;
     private final IMesaService mesaService;
+    private final ICuentaService cuentaService;
     private final com.dows.bitacora2.restaurante.repository.EventoPedidoMongoRepository eventoMongoRepo;
 
     @Override
@@ -51,9 +53,11 @@ public class PedidoServiceImpl implements IPedidoService {
     @Transactional
     public Pedido crear(Pedido pedido) {
         mesaService.obtenerPorId(pedido.getIdMesa());
+        Cuenta cuenta = cuentaService.obtenerAbiertaPorMesa(pedido.getIdMesa());
 
         validarYCompletarItems(pedido.getItems());
-        
+        pedido.setIdCuenta(cuenta.getId());
+
         pedido.setEstado(EstadoPedido.RECIBIDO);
         PedidoEntity nuevo = pedidoRepository.save(entityMapper.toEntity(pedido));
         log.info("Pedido creado: id={}, mesa={}", nuevo.getId(), nuevo.getIdMesa());

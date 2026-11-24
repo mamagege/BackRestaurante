@@ -4,6 +4,7 @@ import com.dows.bitacora2.restaurante.exception.ReglaDeNegocioException;
 import com.dows.bitacora2.restaurante.exception.ToppingsExcedidosException;
 import com.dows.bitacora2.restaurante.exception.TransicionEstadoInvalidaException;
 import com.dows.bitacora2.restaurante.mapper.PedidoEntityMapper;
+import com.dows.bitacora2.restaurante.model.domain.Cuenta;
 import com.dows.bitacora2.restaurante.model.domain.EstadoPedido;
 import com.dows.bitacora2.restaurante.model.domain.ItemPedido;
 import com.dows.bitacora2.restaurante.model.domain.Mesa;
@@ -46,6 +47,9 @@ class PedidoServiceImplTest {
     @Mock
     private EventoPedidoMongoRepository eventoMongoRepo;
 
+    @Mock
+    private ICuentaService cuentaService;
+
     @InjectMocks
     private PedidoServiceImpl pedidoService;
 
@@ -73,6 +77,11 @@ class PedidoServiceImplTest {
         pizzaPlato.setCategoria("Pizza");
         pizzaPlato.setPrecio(15.0);
         pizzaPlato.setDisponible(true);
+
+        Cuenta cuentaAbierta = new Cuenta();
+        cuentaAbierta.setId(50L);
+        cuentaAbierta.setIdMesa(1L);
+        lenient().when(cuentaService.obtenerAbiertaPorMesa(1L)).thenReturn(cuentaAbierta);
     }
 
     @Test
@@ -309,5 +318,30 @@ class PedidoServiceImplTest {
         assertThrows(TransicionEstadoInvalidaException.class, () -> {
             pedidoService.cambiarEstado(100L, "LISTO");
         });
+    }
+
+    @Test
+    void crear_AsociaElPedidoALaCuentaAbiertaDeLaMesa() {
+        when(mesaService.obtenerPorId(1L)).thenReturn(new Mesa());
+        when(platoService.obtenerPorId(1L)).thenReturn(pizzaPlato);
+        PedidoEntity entityMock = new PedidoEntity();
+        when(entityMapper.toEntity(any(Pedido.class))).thenReturn(entityMock);
+        when(pedidoRepository.save(entityMock)).thenReturn(entityMock);
+        when(entityMapper.toDomain(entityMock)).thenReturn(pedidoBase);
+
+        pedidoService.crear(pedidoBase);
+
+        assertEquals(50L, pedidoBase.getIdCuenta());
+    }
+
+    @Test
+    void crear_MesaSinCuentaAbierta_DebeLanzarReglaDeNegocioYNoGuardar() {
+        when(mesaService.obtenerPorId(1L)).thenReturn(new Mesa());
+        when(cuentaService.obtenerAbiertaPorMesa(1L))
+                .thenThrow(new ReglaDeNegocioException("La mesa con id=1 no tiene una cuenta abierta."));
+
+        assertThrows(ReglaDeNegocioException.class, () -> pedidoService.crear(pedidoBase));
+        verify(pedidoRepository, never()).save(any());
+        verifyNoInteractions(platoService);
     }
 }

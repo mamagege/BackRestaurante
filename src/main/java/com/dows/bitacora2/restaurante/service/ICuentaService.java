@@ -9,5 +9,6 @@ public interface ICuentaService {
     Cuenta crear(Cuenta cuenta);
     Cuenta actualizarTotal(Long id);
     Cuenta pagar(Long id);
-    Cuenta asociarPedido(Long idCuenta, Long idPedido);
+    /** Cuenta ABIERTA de la mesa; si no hay, lanza ReglaDeNegocioException (422). */
+    Cuenta obtenerAbiertaPorMesa(Long idMesa);
 }

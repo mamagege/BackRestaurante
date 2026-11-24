@@ -78,7 +78,7 @@ class CuentaServiceImplTest {
     void pagar_CuentaAbiertaYPedidosEntregados_DebePagarYLiberarMesa() {
         when(cuentaRepository.findById(1L)).thenReturn(Optional.of(cuentaEntity));
         when(entityMapper.toDomain(cuentaEntity)).thenReturn(cuenta);
-        when(pedidoRepository.findByIdMesa(2L)).thenReturn(java.util.Collections.emptyList());
+        when(pedidoRepository.findByIdCuenta(1L)).thenReturn(java.util.Collections.emptyList());
         when(entityMapper.toEntity(cuenta)).thenReturn(cuentaEntity);
         when(cuentaRepository.save(cuentaEntity)).thenReturn(cuentaEntity);
 
@@ -108,7 +108,7 @@ class CuentaServiceImplTest {
         
         PedidoEntity pedidoPendiente = new PedidoEntity();
         pedidoPendiente.setEstado(com.dows.bitacora2.restaurante.model.domain.EstadoPedido.EN_PREPARACION);
-        when(pedidoRepository.findByIdMesa(2L)).thenReturn(java.util.Collections.singletonList(pedidoPendiente));
+        when(pedidoRepository.findByIdCuenta(1L)).thenReturn(java.util.Collections.singletonList(pedidoPendiente));
 
         ReglaDeNegocioException exception = assertThrows(ReglaDeNegocioException.class, () -> {
             cuentaService.pagar(1L);
@@ -116,5 +116,77 @@ class CuentaServiceImplTest {
 
         assertTrue(exception.getMessage().contains("preparación"));
         verify(mesaService, never()).cerrarCuenta(any());
+    }
+
+    private static PedidoEntity pedido(com.dows.bitacora2.restaurante.model.domain.EstadoPedido estado,
+                                       double precio, int cantidad) {
+        com.dows.bitacora2.restaurante.persistence.entity.ItemPedidoEntity item =
+                new com.dows.bitacora2.restaurante.persistence.entity.ItemPedidoEntity();
+        item.setPrecioCongelado(precio);
+        item.setCantidad(cantidad);
+        PedidoEntity p = new PedidoEntity();
+        p.setEstado(estado);
+        p.setItems(java.util.List.of(item));
+        return p;
+    }
+
+    @Test
+    void actualizarTotal_SumaSoloPedidosDeLaCuentaYExcluyeCancelados() {
+        when(cuentaRepository.findById(1L)).thenReturn(Optional.of(cuentaEntity));
+        when(entityMapper.toDomain(cuentaEntity)).thenReturn(cuenta);
+        when(pedidoRepository.findByIdCuenta(1L)).thenReturn(java.util.List.of(
+                pedido(com.dows.bitacora2.restaurante.model.domain.EstadoPedido.ENTREGADO, 30000, 2),
+                pedido(com.dows.bitacora2.restaurante.model.domain.EstadoPedido.CANCELADO, 99999, 1)));
+        when(entityMapper.toEntity(cuenta)).thenReturn(cuentaEntity);
+        when(cuentaRepository.save(cuentaEntity)).thenReturn(cuentaEntity);
+
+        cuentaService.actualizarTotal(1L);
+
+        assertEquals(60000.0, cuenta.getTotal());
+        // regresión: el total ya no se calcula con el historial de la mesa
+        verify(pedidoRepository).findByIdCuenta(1L);
+        verifyNoMoreInteractions(pedidoRepository);
+    }
+
+    @Test
+    void pagar_CongelaElTotalConLosPedidosDeLaCuenta() {
+        when(cuentaRepository.findById(1L)).thenReturn(Optional.of(cuentaEntity));
+        when(entityMapper.toDomain(cuentaEntity)).thenReturn(cuenta);
+        when(pedidoRepository.findByIdCuenta(1L)).thenReturn(java.util.List.of(
+                pedido(com.dows.bitacora2.restaurante.model.domain.EstadoPedido.ENTREGADO, 12500.5, 2)));
+        when(entityMapper.toEntity(cuenta)).thenReturn(cuentaEntity);
+        when(cuentaRepository.save(cuentaEntity)).thenReturn(cuentaEntity);
+
+        cuentaService.pagar(1L);
+
+        assertEquals(25001.0, cuenta.getTotal());
+        assertEquals(EstadoCuenta.CERRADA, cuenta.getEstado());
+    }
+
+    @Test
+    void crear_MesaConCuentaAbierta_DebeLanzarConflicto() {
+        when(mesaService.obtenerPorId(2L)).thenReturn(new Mesa());
+        when(cuentaRepository.existsByIdMesaAndEstado(2L, EstadoCuenta.ABIERTA)).thenReturn(true);
+
+        assertThrows(com.dows.bitacora2.restaurante.exception.ConflictoException.class, () -> cuentaService.crear(cuenta));
+        verify(mesaService, never()).abrirCuenta(any());
+        verify(cuentaRepository, never()).save(any());
+    }
+
+    @Test
+    void obtenerAbiertaPorMesa_SinCuentaAbierta_DebeLanzarReglaDeNegocio() {
+        when(cuentaRepository.findFirstByIdMesaAndEstado(2L, EstadoCuenta.ABIERTA)).thenReturn(Optional.empty());
+
+        ReglaDeNegocioException ex = assertThrows(ReglaDeNegocioException.class,
+                () -> cuentaService.obtenerAbiertaPorMesa(2L));
+        assertTrue(ex.getMessage().contains("no tiene una cuenta abierta"));
+    }
+
+    @Test
+    void obtenerAbiertaPorMesa_ConCuentaAbierta_LaRetorna() {
+        when(cuentaRepository.findFirstByIdMesaAndEstado(2L, EstadoCuenta.ABIERTA)).thenReturn(Optional.of(cuentaEntity));
+        when(entityMapper.toDomain(cuentaEntity)).thenReturn(cuenta);
+
+        assertEquals(1L, cuentaService.obtenerAbiertaPorMesa(2L).getId());
     }
 }
