@@ -57,6 +57,20 @@ public class PlatoServiceImpl implements IPlatoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Plato obtenerDisponiblePorId(Long id) {
+        return platoRepository.findByIdAndDisponibleTrue(id)
+                .map(entityMapper::toDomain)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Plato disponible", id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Plato> obtenerDisponiblesPorCategoria(String categoria) {
+        return entityMapper.toDomainList(platoRepository.findByCategoriaIgnoreCaseAndDisponibleTrue(categoria));
+    }
+
+    @Override
     @Transactional
     public Plato crear(Plato plato) {
         log.info("Creando plato con nombre '{}'", plato.getNombre());
